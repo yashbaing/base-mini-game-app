@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Run, jump, and fly through Base! Endless crypto runner adventure. Dodge bugs, glitches, rug pulls, and broken blocks. Collect Base tokens to unlock rocket mode and boost scores. Connect wallet for leaderboard, share achievements on social media. Fast-paced retro-style game built on Base blockchain. Join the race! 🚀">
+    <title>Base Runner - Endless Crypto Game</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="ui-overlay">
+            <div id="score-display">Score: 0</div>
+            <div id="high-score-display">High Score: 0</div>
+            
+            <!-- Wallet Connection UI -->
+            <div id="wallet-ui">
+                <button id="wallet-connect-btn" class="wallet-btn">Connect Wallet</button>
+                <div id="wallet-info" style="display: none;">
+                    <span id="wallet-address"></span>
+                </div>
+                <button id="wallet-disconnect-btn" class="wallet-btn" style="display: none;">Disconnect</button>
+            </div>
+            
+            <div id="menu-screen" class="screen">
+                <h1>Base Runner</h1>
+                <p>Press <strong>SPACE</strong> or <strong>tap</strong> to jump/fly</p>
+                <p class="instructions">Avoid obstacles and collect Base tokens!</p>
+                <div id="wallet-menu-section">
+                    <button id="wallet-connect-menu-btn" class="wallet-menu-btn">Connect Wallet</button>
+                    <div id="wallet-info-menu" style="display: none;">
+                        <span id="wallet-address-menu"></span>
+                        <button id="wallet-disconnect-menu-btn" class="wallet-menu-btn-small">Disconnect</button>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button id="start-button">Start Game</button>
+                    <button id="leaderboard-button" class="secondary-btn">Leaderboard</button>
+                </div>
+            </div>
+            <div id="game-over-screen" class="screen hidden">
+                <div class="game-over-content">
+                    <div class="inspirational-message">
+                        <p class="inspirational-text">Keep running, keep collecting, keep building!</p>
+                        <p class="inspirational-subtext">Every run makes you stronger on Base.</p>
+                    </div>
+                    <div class="score-container">
+                        <h2 class="game-over-title">Game Over</h2>
+                        <p id="final-score" class="final-score-display">Final Score: 0</p>
+                        <p id="high-score-badge" class="high-score-badge hidden">🏆 New High Score! 🏆</p>
+                        <div class="share-icons-container">
+                            <button id="share-x-button" class="share-icon-btn" title="Share on X">𝕏</button>
+                            <button id="share-twitter-button" class="share-icon-btn" title="Share on Twitter">🐦</button>
+                            <button id="share-button" class="share-icon-btn" title="Share">📤</button>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button id="restart-button">Play Again</button>
+                        <button id="leaderboard-button-2" class="secondary-btn">Leaderboard</button>
+                    </div>
+                </div>
+            </div>
+            <div id="leaderboard-screen" class="screen hidden">
+                <h2>Leaderboard</h2>
+                <div id="leaderboard-content">
+                    <div id="leaderboard-list"></div>
+                </div>
+                <button id="close-leaderboard">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ethers.js for wallet connection -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/floatingText.js"></script>
+    <script src="js/wallet.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/token.js"></script>
+    <script src="js/obstacle.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/game.js"></script>
+    <script>
+        // Initialize game when page loads
+        let game;
+        let walletManager;
+        
+        window.addEventListener('load', () => {
+            walletManager = new WalletManager();
+            game = new Game('game-canvas', walletManager);
+            game.init();
+            
+            // Wallet connection handlers (top-right)
+            const connectBtn = document.getElementById('wallet-connect-btn');
+            const disconnectBtn = document.getElementById('wallet-disconnect-btn');
+            
+            // Wallet connection handlers (menu)
+            const connectMenuBtn = document.getElementById('wallet-connect-menu-btn');
+            const disconnectMenuBtn = document.getElementById('wallet-disconnect-menu-btn');
+            
+            const leaderboardBtn = document.getElementById('leaderboard-button');
+            const leaderboardBtn2 = document.getElementById('leaderboard-button-2');
+            const closeLeaderboardBtn = document.getElementById('close-leaderboard');
+            
+            // Top-right wallet buttons
+            if (connectBtn) {
+                connectBtn.addEventListener('click', async () => {
+                    await walletManager.connect();
+                });
+            }
+            
+            if (disconnectBtn) {
+                disconnectBtn.addEventListener('click', () => {
+                    walletManager.disconnect();
+                });
+            }
+            
+            // Menu wallet buttons
+            if (connectMenuBtn) {
+                connectMenuBtn.addEventListener('click', async () => {
+                    await walletManager.connect();
+                });
+            }
+            
+            if (disconnectMenuBtn) {
+                disconnectMenuBtn.addEventListener('click', () => {
+                    walletManager.disconnect();
+                });
+            }
+            
+            if (leaderboardBtn) {
+                leaderboardBtn.addEventListener('click', () => {
+                    game.showLeaderboard();
+                });
+            }
+            
+            if (leaderboardBtn2) {
+                leaderboardBtn2.addEventListener('click', () => {
+                    game.showLeaderboard();
+                });
+            }
+            
+            if (closeLeaderboardBtn) {
+                closeLeaderboardBtn.addEventListener('click', () => {
+                    game.hideLeaderboard();
+                });
+            }
+        });
+    </script>
+</body>
+</html>
