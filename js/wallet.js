@@ -135,6 +135,9 @@ class WalletManager {
 
     loadLeaderboard() {
         try {
+            if (typeof localStorage === 'undefined' || !localStorage) {
+                return [];
+            }
             const stored = localStorage.getItem('baseRunnerLeaderboard');
             return stored ? JSON.parse(stored) : [];
         } catch (error) {
@@ -145,6 +148,10 @@ class WalletManager {
 
     saveLeaderboard() {
         try {
+            if (typeof localStorage === 'undefined' || !localStorage) {
+                console.warn('localStorage not available, leaderboard not saved');
+                return;
+            }
             localStorage.setItem('baseRunnerLeaderboard', JSON.stringify(this.leaderboard));
         } catch (error) {
             console.error('Error saving leaderboard:', error);

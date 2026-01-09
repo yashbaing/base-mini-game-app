@@ -11,6 +11,12 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- Loading indicator -->
+    <div id="loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0052FF 0%, #7B3FE4 50%, #FF6B9D 100%); display: flex; justify-content: center; align-items: center; z-index: 10000; flex-direction: column; color: white; font-family: system-ui, -apple-system, sans-serif;">
+        <div style="font-size: 24px; margin-bottom: 20px; text-align: center;">Base Runner</div>
+        <div style="font-size: 16px; opacity: 0.8; text-align: center;">Loading game...</div>
+        <div id="loading-error" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255,0,0,0.2); border-radius: 10px; max-width: 80%; text-align: center; font-size: 14px;"></div>
+    </div>
     <div id="game-container">
         <canvas id="game-canvas"></canvas>
         <div id="ui-overlay">
@@ -74,8 +80,63 @@
         </div>
     </div>
     
-    <!-- Ethers.js for wallet connection -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <!-- Polyfills and checks for mobile compatibility -->
+    <script>
+        // Polyfill for requestAnimationFrame (for older mobile browsers)
+        if (!window.requestAnimationFrame) {
+            window.requestAnimationFrame = (function() {
+                return window.webkitRequestAnimationFrame ||
+                       window.mozRequestAnimationFrame ||
+                       window.oRequestAnimationFrame ||
+                       window.msRequestAnimationFrame ||
+                       function(callback) {
+                           window.setTimeout(callback, 1000 / 60);
+                       };
+            })();
+        }
+        
+        // Polyfill for localStorage (basic fallback for private browsing)
+        if (!window.localStorage) {
+            window.localStorage = {
+                _data: {},
+                setItem: function(id, val) {
+                    this._data[id] = String(val);
+                },
+                getItem: function(id) {
+                    return this._data.hasOwnProperty(id) ? this._data[id] : null;
+                },
+                removeItem: function(id) {
+                    delete this._data[id];
+                },
+                clear: function() {
+                    this._data = {};
+                }
+            };
+        }
+        
+        // Check canvas support
+        function checkCanvasSupport() {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                return !!(canvas && ctx);
+            } catch (e) {
+                return false;
+            }
+        }
+        
+        if (!checkCanvasSupport()) {
+            const errorDiv = document.getElementById('loading-error');
+            if (errorDiv) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'Your browser does not support HTML5 Canvas. Please use a modern browser.';
+            }
+            throw new Error('Canvas not supported');
+        }
+    </script>
+    
+    <!-- Ethers.js for wallet connection - load with error handling -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" onerror="console.warn('Failed to load ethers.js, wallet functionality will be disabled'); window.ethersLoaded = false;" onload="window.ethersLoaded = true;"></script>
     <script src="js/utils.js"></script>
     <script src="js/particles.js"></script>
     <script src="js/floatingText.js"></script>
@@ -119,14 +180,29 @@
                     console.log('Initializing game objects...');
                     game.init();
                     console.log('Game initialized successfully!');
+                    
+                    // Hide loading screen
+                    const loadingScreen = document.getElementById('loading-screen');
+                    if (loadingScreen) {
+                        loadingScreen.style.display = 'none';
+                    }
                 } catch (gameError) {
                     console.error('Game initialization failed:', gameError);
                     console.error('Stack trace:', gameError.stack);
-                    // Show error in page instead of alert (which might not work on mobile)
-                    const errorDiv = document.createElement('div');
-                    errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;padding:20px;z-index:9999;border-radius:10px;text-align:center;max-width:80%;';
-                    errorDiv.innerHTML = '<h2>Game Initialization Error</h2><p>' + gameError.message + '</p><p style="font-size:12px;margin-top:10px;">Check console for details</p>';
-                    document.body.appendChild(errorDiv);
+                    // Show error in loading screen
+                    const loadingScreen = document.getElementById('loading-screen');
+                    const errorDiv = document.getElementById('loading-error');
+                    if (loadingScreen && errorDiv) {
+                        loadingScreen.style.background = 'linear-gradient(135deg, #8B0000 0%, #FF0000 100%)';
+                        errorDiv.style.display = 'block';
+                        errorDiv.innerHTML = '<strong>Game Initialization Error</strong><br>' + gameError.message + '<br><small>Check console for details</small>';
+                    } else {
+                        // Fallback error display
+                        const fallbackError = document.createElement('div');
+                        fallbackError.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;padding:20px;z-index:9999;border-radius:10px;text-align:center;max-width:80%;';
+                        fallbackError.innerHTML = '<h2>Game Initialization Error</h2><p>' + gameError.message + '</p><p style="font-size:12px;margin-top:10px;">Check console for details</p>';
+                        document.body.appendChild(fallbackError);
+                    }
                     return;
                 }
                 
@@ -186,19 +262,19 @@
                         game.handleResize();
                     }
                 });
-            
-            // Wallet connection handlers (top-right)
-            const connectBtn = document.getElementById('wallet-connect-btn');
-            const disconnectBtn = document.getElementById('wallet-disconnect-btn');
-            
-            // Wallet connection handlers (menu)
-            const connectMenuBtn = document.getElementById('wallet-connect-menu-btn');
-            const disconnectMenuBtn = document.getElementById('wallet-disconnect-menu-btn');
-            
-            const leaderboardBtn = document.getElementById('leaderboard-button');
-            const leaderboardBtn2 = document.getElementById('leaderboard-button-2');
-            const closeLeaderboardBtn = document.getElementById('close-leaderboard');
-            
+                
+                // Wallet connection handlers (top-right)
+                const connectBtn = document.getElementById('wallet-connect-btn');
+                const disconnectBtn = document.getElementById('wallet-disconnect-btn');
+                
+                // Wallet connection handlers (menu)
+                const connectMenuBtn = document.getElementById('wallet-connect-menu-btn');
+                const disconnectMenuBtn = document.getElementById('wallet-disconnect-menu-btn');
+                
+                const leaderboardBtn = document.getElementById('leaderboard-button');
+                const leaderboardBtn2 = document.getElementById('leaderboard-button-2');
+                const closeLeaderboardBtn = document.getElementById('close-leaderboard');
+                
                 // Top-right wallet buttons
                 if (connectBtn && walletManager) {
                     connectBtn.addEventListener('click', async () => {
@@ -267,23 +343,44 @@
             } catch (initError) {
                 console.error('Initialization error:', initError);
                 console.error('Stack trace:', initError.stack);
-                const errorDiv = document.createElement('div');
-                errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;padding:20px;z-index:9999;border-radius:10px;text-align:center;max-width:80%;';
-                errorDiv.innerHTML = '<h2>Initialization Error</h2><p>' + initError.message + '</p><p style="font-size:12px;margin-top:10px;">Check console for details</p>';
-                document.body.appendChild(errorDiv);
+                const loadingScreen = document.getElementById('loading-screen');
+                const errorDiv = document.getElementById('loading-error');
+                if (loadingScreen && errorDiv) {
+                    loadingScreen.style.background = 'linear-gradient(135deg, #8B0000 0%, #FF0000 100%)';
+                    errorDiv.style.display = 'block';
+                    errorDiv.innerHTML = '<strong>Initialization Error</strong><br>' + initError.message + '<br><small>Check console for details</small>';
+                } else {
+                    const fallbackError = document.createElement('div');
+                    fallbackError.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;padding:20px;z-index:9999;border-radius:10px;text-align:center;max-width:80%;';
+                    fallbackError.innerHTML = '<h2>Initialization Error</h2><p>' + initError.message + '</p><p style="font-size:12px;margin-top:10px;">Check console for details</p>';
+                    document.body.appendChild(fallbackError);
+                }
             }
+        }
+        
+        // Initialize game when DOM is ready and scripts are loaded
+        function startInitialization() {
+            // Check if all required classes are loaded
+            if (typeof Game === 'undefined' || typeof InputHandler === 'undefined') {
+                console.warn('Game classes not loaded yet, retrying...');
+                setTimeout(startInitialization, 100);
+                return;
+            }
+            
+            console.log('All scripts loaded, starting initialization...');
+            initializeGame();
         }
         
         // Try multiple load events for better mobile compatibility
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 console.log('DOMContentLoaded fired');
-                setTimeout(initializeGame, 100); // Small delay for mobile browsers
+                setTimeout(startInitialization, 200); // Small delay for mobile browsers
             });
         } else {
-            // DOM already loaded, run immediately with small delay
-            console.log('DOM already loaded, initializing...');
-            setTimeout(initializeGame, 100);
+            // DOM already loaded
+            console.log('DOM already loaded, starting initialization...');
+            setTimeout(startInitialization, 200);
         }
         
         // Also wait for window load for external resources (backup)
@@ -292,17 +389,26 @@
             // Only initialize if not already done
             if (!game) {
                 console.log('Game not initialized yet, initializing now...');
-                setTimeout(initializeGame, 100);
+                setTimeout(startInitialization, 200);
             }
         });
         
-        // Immediate fallback for mobile browsers that might not fire events correctly
+        // Fallback initialization for mobile browsers that might not fire events correctly
         setTimeout(() => {
-            if (!game) {
+            if (!game && typeof Game !== 'undefined') {
                 console.log('Fallback initialization triggered');
-                initializeGame();
+                startInitialization();
+            } else if (typeof Game === 'undefined') {
+                console.error('Game class not found after timeout');
+                const loadingScreen = document.getElementById('loading-screen');
+                const errorDiv = document.getElementById('loading-error');
+                if (loadingScreen && errorDiv) {
+                    loadingScreen.style.background = 'linear-gradient(135deg, #8B0000 0%, #FF0000 100%)';
+                    errorDiv.style.display = 'block';
+                    errorDiv.innerHTML = '<strong>Script Loading Error</strong><br>Game scripts failed to load. Please check your internet connection and refresh the page.';
+                }
             }
-        }, 500);
+        }, 2000);
     </script>
 </body>
 </html>

@@ -8,10 +8,17 @@ class Game {
             throw new Error('Canvas element not found: ' + canvasId);
         }
         
+        // Get 2d context with fallback
         this.ctx = this.canvas.getContext('2d');
         if (!this.ctx) {
             console.error('Could not get 2d context from canvas');
-            throw new Error('Could not get 2d context from canvas');
+            // Try to get experimental webgl context as fallback
+            try {
+                this.ctx = this.canvas.getContext('experimental-webgl') || 
+                          this.canvas.getContext('webgl');
+            } catch (e) {
+                throw new Error('Canvas 2D context not supported on this device');
+            }
         }
         
         this.input = new InputHandler();
@@ -20,7 +27,14 @@ class Game {
         // Game state
         this.state = 'menu'; // 'menu', 'playing', 'gameover'
         this.score = 0;
-        this.highScore = Math.floor(parseFloat(localStorage.getItem('baseRunnerHighScore')) || 0);
+        // Safe localStorage access with fallback for private browsing
+        try {
+            const stored = localStorage.getItem('baseRunnerHighScore');
+            this.highScore = stored ? Math.floor(parseFloat(stored) || 0) : 0;
+        } catch (e) {
+            console.warn('localStorage not available, using default high score');
+            this.highScore = 0;
+        }
         this.gameSpeed = 1;
         this.baseSpeed = 12; // Increased to 12 for faster gameplay
         this.speedIncreaseRate = 0.00015; // Increased speed progression rate
@@ -242,7 +256,14 @@ class Game {
         const isNewHighScore = finalScore > this.highScore;
         if (isNewHighScore) {
             this.highScore = finalScore;
-            localStorage.setItem('baseRunnerHighScore', this.highScore);
+            // Safe localStorage access
+            try {
+                if (typeof localStorage !== 'undefined' && localStorage) {
+                    localStorage.setItem('baseRunnerHighScore', this.highScore.toString());
+                }
+            } catch (e) {
+                console.warn('Failed to save high score to localStorage:', e);
+            }
         }
         this.isNewHighScore = isNewHighScore;
         
