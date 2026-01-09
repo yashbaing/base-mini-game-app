@@ -13,8 +13,15 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    min-height: -webkit-fill-available; /* iOS Safari */
     overflow: hidden;
-    position: relative;
+    position: fixed; /* Prevent scrolling on mobile */
+    width: 100%;
+    height: 100%;
+    touch-action: none; /* Prevent touch gestures */
+    -webkit-touch-callout: none; /* Disable callout on iOS */
+    -webkit-user-select: none; /* Prevent text selection */
+    user-select: none;
 }
 
 body::before {
@@ -50,7 +57,10 @@ body::before {
     width: 1000px;
     height: 600px;
     max-width: 95vw;
+    max-width: calc(100vw - 20px); /* Mobile safe area */
     max-height: 95vh;
+    max-height: calc(100vh - 20px); /* Mobile safe area */
+    touch-action: none; /* Prevent touch gestures on container */
 }
 
 #game-canvas {
@@ -58,6 +68,10 @@ body::before {
     background: #0a0a1a;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    touch-action: none; /* Prevent touch gestures */
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
 }
 
 #ui-overlay {
@@ -851,10 +865,13 @@ button:active {
         margin-bottom: 8px;
     }
     
-    button, .secondary-btn, .wallet-menu-btn {
-        padding: 12px 32px;
-        font-size: 13px;
-        max-width: 280px;
+        button, .secondary-btn, .wallet-menu-btn {
+        padding: 14px 32px; /* Larger touch target (min 44px height) */
+        font-size: 15px;
+        max-width: 90%;
+        min-height: 44px; /* Minimum touch target size for mobile */
+        min-width: 44px;
+        touch-action: manipulation; /* Faster touch response */
     }
     
     .button-group {
@@ -907,6 +924,146 @@ button:active {
     #leaderboard-content {
         max-height: 280px;
         margin: 12px 0;
+    }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+    #game-container {
+        border-radius: 10px;
+        max-width: 98vw;
+        max-height: 98vh;
+        width: 98vw;
+        height: 55.2vw; /* Maintain 16:9 aspect ratio */
+    }
+    
+    #score-display {
+        font-size: 20px;
+        top: 12px;
+        left: 12px;
+    }
+    
+    #high-score-display {
+        font-size: 12px;
+        top: 36px;
+        left: 12px;
+    }
+    
+    #wallet-ui {
+        max-width: 200px;
+        font-size: 11px;
+    }
+    
+    .wallet-btn {
+        padding: 10px 16px;
+        font-size: 12px;
+        min-height: 40px;
+    }
+    
+    .share-icon-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+    #game-container {
+        width: 100vw;
+        height: 56.25vw; /* 16:9 aspect ratio */
+        border-radius: 0;
+        max-width: 100vw;
+        max-height: 100vh;
+    }
+    
+    #score-display {
+        font-size: 18px;
+        top: 8px;
+        left: 8px;
+    }
+    
+    #high-score-display {
+        font-size: 11px;
+        top: 30px;
+        left: 8px;
+    }
+    
+    .screen {
+        padding: 15px 12px;
+    }
+    
+    .screen h1 {
+        font-size: 28px;
+    }
+    
+    .screen h2 {
+        font-size: 22px;
+    }
+    
+    button, .secondary-btn, .wallet-menu-btn {
+        padding: 12px 24px;
+        font-size: 14px;
+        width: 90%;
+        max-width: 260px;
+    }
+    
+    .button-group {
+        gap: 8px;
+    }
+    
+    #wallet-menu-section {
+        max-width: 100%;
+    }
+}
+
+/* Landscape orientation for mobile */
+@media (max-width: 896px) and (orientation: landscape) {
+    #game-container {
+        width: 90vw;
+        height: 50.625vw; /* 16:9 aspect ratio */
+        max-height: 90vh;
+    }
+    
+    #score-display {
+        font-size: 18px;
+    }
+    
+    #high-score-display {
+        font-size: 11px;
+    }
+    
+    .screen {
+        padding: 12px 15px;
+        max-height: 90vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Touch-friendly button improvements */
+button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    cursor: pointer;
+}
+
+/* Prevent text selection on mobile */
+.screen, #ui-overlay, #game-canvas {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+/* iOS Safari safe area support */
+@supports (padding: max(0px)) {
+    #game-container {
+        padding-left: max(10px, env(safe-area-inset-left));
+        padding-right: max(10px, env(safe-area-inset-right));
+        padding-top: max(10px, env(safe-area-inset-top));
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
 }
 

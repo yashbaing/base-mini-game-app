@@ -85,21 +85,34 @@ class Game {
 
     handleResize() {
         const container = this.canvas.parentElement;
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
+        const containerWidth = container.clientWidth || window.innerWidth;
+        const containerHeight = container.clientHeight || window.innerHeight;
         
         // Scale to fit container while maintaining aspect ratio
         const aspectRatio = this.canvasWidth / this.canvasHeight;
         let scale = Math.min(containerWidth / this.canvasWidth, containerHeight / this.canvasHeight);
         
-        // Limit scale to prevent it from being too small
-        scale = Math.max(scale, 0.5);
+        // For mobile devices, optimize scale for better performance
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            // Ensure minimum scale for readability but optimize for performance
+            scale = Math.max(scale, 0.3);
+            scale = Math.min(scale, 0.98);
+        } else {
+            // Limit scale to prevent it from being too small on desktop
+            scale = Math.max(scale, 0.5);
+        }
         
         const newWidth = this.canvasWidth * scale;
         const newHeight = this.canvasHeight * scale;
         
         this.canvas.style.width = newWidth + 'px';
         this.canvas.style.height = newHeight + 'px';
+        
+        // Prevent text size adjustment on mobile for consistency
+        if (isMobile) {
+            document.documentElement.style.fontSize = '16px';
+        }
     }
 
     setupUIListeners() {

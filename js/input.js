@@ -38,9 +38,15 @@ class InputHandler {
     }
 
     setupTouchListeners() {
+        // Prevent default touch behaviors that interfere with gameplay
+        const preventDefaults = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        
         // Touch start
         window.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+            preventDefaults(e);
             if (!this.jumpPressed) {
                 this.jumpJustPressed = true;
                 this.jumpPressed = true;
@@ -49,8 +55,16 @@ class InputHandler {
 
         // Touch end
         window.addEventListener('touchend', (e) => {
-            e.preventDefault();
+            preventDefaults(e);
             this.jumpPressed = false;
+        }, { passive: false });
+        
+        // Touch move - prevent scrolling
+        window.addEventListener('touchmove', (e) => {
+            // Only prevent if touching the game canvas area
+            if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                preventDefaults(e);
+            }
         }, { passive: false });
 
         // Mouse click (for desktop testing)
@@ -63,6 +77,13 @@ class InputHandler {
 
         window.addEventListener('mouseup', (e) => {
             this.jumpPressed = false;
+        });
+        
+        // Prevent context menu on long press (mobile)
+        window.addEventListener('contextmenu', (e) => {
+            if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                e.preventDefault();
+            }
         });
     }
 

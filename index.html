@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="Run, jump, and fly through Base! Endless crypto runner adventure. Dodge bugs, glitches, rug pulls, and broken blocks. Collect Base tokens to unlock rocket mode and boost scores. Connect wallet for leaderboard, share achievements on social media. Fast-paced retro-style game built on Base blockchain. Join the race! 🚀">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Base Runner - Endless Crypto Game</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -87,10 +90,52 @@
         let game;
         let walletManager;
         
+        // Prevent default mobile behaviors
+        document.addEventListener('touchmove', (e) => {
+            // Prevent scrolling during gameplay
+            if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        document.addEventListener('gesturestart', (e) => {
+            e.preventDefault(); // Prevent pinch zoom
+        });
+        
+        document.addEventListener('gesturechange', (e) => {
+            e.preventDefault(); // Prevent pinch zoom
+        });
+        
+        document.addEventListener('gestureend', (e) => {
+            e.preventDefault(); // Prevent pinch zoom
+        });
+        
+        // Prevent double-tap zoom on mobile
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+        
         window.addEventListener('load', () => {
             walletManager = new WalletManager();
             game = new Game('game-canvas', walletManager);
             game.init();
+            
+            // Handle orientation change on mobile
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => {
+                    game.handleResize();
+                }, 100);
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                game.handleResize();
+            });
             
             // Wallet connection handlers (top-right)
             const connectBtn = document.getElementById('wallet-connect-btn');
