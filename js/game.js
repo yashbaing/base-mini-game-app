@@ -3,7 +3,17 @@
 class Game {
     constructor(canvasId, walletManager = null) {
         this.canvas = document.getElementById(canvasId);
+        if (!this.canvas) {
+            console.error('Canvas element not found:', canvasId);
+            throw new Error('Canvas element not found: ' + canvasId);
+        }
+        
         this.ctx = this.canvas.getContext('2d');
+        if (!this.ctx) {
+            console.error('Could not get 2d context from canvas');
+            throw new Error('Could not get 2d context from canvas');
+        }
+        
         this.input = new InputHandler();
         this.walletManager = walletManager;
         
@@ -145,24 +155,37 @@ class Game {
     }
 
     init() {
-        // Initialize game objects
-        this.player = new Player(100, this.groundY - 60, 45, 60);
-        this.obstacleManager = new ObstacleManager(
-            this.canvasWidth,
-            this.canvasHeight,
-            this.groundY
-        );
-        this.tokenManager = new TokenManager(
-            this.canvasWidth,
-            this.canvasHeight,
-            this.groundY
-        );
-        
-        // Update high score display
-        this.updateHighScore();
-        
-        // Start game loop
-        this.gameLoop(0);
+        try {
+            console.log('Initializing game objects...');
+            
+            // Initialize game objects
+            this.player = new Player(100, this.groundY - 60, 45, 60);
+            console.log('Player created');
+            
+            this.obstacleManager = new ObstacleManager(
+                this.canvasWidth,
+                this.canvasHeight,
+                this.groundY
+            );
+            console.log('Obstacle manager created');
+            
+            this.tokenManager = new TokenManager(
+                this.canvasWidth,
+                this.canvasHeight,
+                this.groundY
+            );
+            console.log('Token manager created');
+            
+            // Update high score display
+            this.updateHighScore();
+            
+            console.log('Starting game loop...');
+            // Start game loop
+            this.gameLoop(0);
+        } catch (error) {
+            console.error('Error in game init:', error);
+            throw error;
+        }
     }
 
     startGame() {
@@ -812,18 +835,30 @@ class Game {
     }
 
     gameLoop(timestamp) {
-        // Calculate delta time
-        const deltaTime = timestamp - this.lastFrameTime;
-        this.lastFrameTime = timestamp;
-        
-        // Update game
-        this.update(deltaTime);
-        
-        // Draw game
-        this.draw();
-        
-        // Continue loop
-        requestAnimationFrame((ts) => this.gameLoop(ts));
+        try {
+            // Initialize lastFrameTime on first call
+            if (!this.lastFrameTime) {
+                this.lastFrameTime = timestamp;
+            }
+            
+            // Calculate delta time
+            const deltaTime = timestamp - this.lastFrameTime;
+            this.lastFrameTime = timestamp;
+            
+            // Update game
+            this.update(deltaTime);
+            
+            // Draw game
+            this.draw();
+            
+            // Continue loop
+            requestAnimationFrame((ts) => this.gameLoop(ts));
+        } catch (error) {
+            console.error('Error in game loop:', error);
+            console.error('Stack trace:', error.stack);
+            // Continue game loop even if there's an error to prevent complete crash
+            requestAnimationFrame((ts) => this.gameLoop(ts));
+        }
     }
 
     showLeaderboard() {

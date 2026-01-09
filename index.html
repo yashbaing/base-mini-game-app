@@ -90,52 +90,102 @@
         let game;
         let walletManager;
         
-        // Prevent default mobile behaviors
-        document.addEventListener('touchmove', (e) => {
-            // Prevent scrolling during gameplay
-            if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-        
-        document.addEventListener('gesturestart', (e) => {
-            e.preventDefault(); // Prevent pinch zoom
-        });
-        
-        document.addEventListener('gesturechange', (e) => {
-            e.preventDefault(); // Prevent pinch zoom
-        });
-        
-        document.addEventListener('gestureend', (e) => {
-            e.preventDefault(); // Prevent pinch zoom
-        });
-        
-        // Prevent double-tap zoom on mobile
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', (e) => {
-            const now = Date.now();
-            if (now - lastTouchEnd <= 300) {
-                e.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, { passive: false });
-        
-        window.addEventListener('load', () => {
-            walletManager = new WalletManager();
-            game = new Game('game-canvas', walletManager);
-            game.init();
-            
-            // Handle orientation change on mobile
-            window.addEventListener('orientationchange', () => {
-                setTimeout(() => {
-                    game.handleResize();
-                }, 100);
-            });
-            
-            // Handle window resize
-            window.addEventListener('resize', () => {
-                game.handleResize();
-            });
+        // Wait for both DOM and all resources to load
+        function initializeGame() {
+            try {
+                console.log('Initializing game...');
+                console.log('Canvas element exists:', !!document.getElementById('game-canvas'));
+                
+                // Initialize wallet manager with error handling (continue even if it fails)
+                try {
+                    walletManager = new WalletManager();
+                    console.log('Wallet manager initialized');
+                } catch (walletError) {
+                    console.warn('Wallet manager initialization failed (continuing without wallet):', walletError);
+                    walletManager = null; // Continue without wallet
+                }
+                
+                // Initialize game with error handling
+                try {
+                    const canvasElement = document.getElementById('game-canvas');
+                    if (!canvasElement) {
+                        throw new Error('Canvas element #game-canvas not found in DOM');
+                    }
+                    
+                    console.log('Creating Game instance...');
+                    game = new Game('game-canvas', walletManager);
+                    console.log('Game instance created');
+                    
+                    console.log('Initializing game objects...');
+                    game.init();
+                    console.log('Game initialized successfully!');
+                } catch (gameError) {
+                    console.error('Game initialization failed:', gameError);
+                    console.error('Stack trace:', gameError.stack);
+                    // Show error in page instead of alert (which might not work on mobile)
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;padding:20px;z-index:9999;border-radius:10px;text-align:center;max-width:80%;';
+                    errorDiv.innerHTML = '<h2>Game Initialization Error</h2><p>' + gameError.message + '</p><p style="font-size:12px;margin-top:10px;">Check console for details</p>';
+                    document.body.appendChild(errorDiv);
+                    return;
+                }
+                
+                // Set up mobile behavior prevention AFTER game is initialized
+                // Prevent scrolling during gameplay (only for game canvas)
+                document.addEventListener('touchmove', (e) => {
+                    if (game && game.state === 'playing') {
+                        if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                            e.preventDefault();
+                        }
+                    }
+                }, { passive: false });
+                
+                // Prevent pinch zoom only on game canvas
+                document.addEventListener('gesturestart', (e) => {
+                    if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                        e.preventDefault();
+                    }
+                });
+                
+                document.addEventListener('gesturechange', (e) => {
+                    if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                        e.preventDefault();
+                    }
+                });
+                
+                document.addEventListener('gestureend', (e) => {
+                    if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                        e.preventDefault();
+                    }
+                });
+                
+                // Prevent double-tap zoom on game canvas
+                let lastTouchEnd = 0;
+                document.addEventListener('touchend', (e) => {
+                    if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                        const now = Date.now();
+                        if (now - lastTouchEnd <= 300) {
+                            e.preventDefault();
+                        }
+                        lastTouchEnd = now;
+                    }
+                }, { passive: false });
+                
+                // Handle orientation change on mobile
+                window.addEventListener('orientationchange', () => {
+                    setTimeout(() => {
+                        if (game && typeof game.handleResize === 'function') {
+                            game.handleResize();
+                        }
+                    }, 100);
+                });
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    if (game && typeof game.handleResize === 'function') {
+                        game.handleResize();
+                    }
+                });
             
             // Wallet connection handlers (top-right)
             const connectBtn = document.getElementById('wallet-connect-btn');
@@ -149,50 +199,110 @@
             const leaderboardBtn2 = document.getElementById('leaderboard-button-2');
             const closeLeaderboardBtn = document.getElementById('close-leaderboard');
             
-            // Top-right wallet buttons
-            if (connectBtn) {
-                connectBtn.addEventListener('click', async () => {
-                    await walletManager.connect();
-                });
+                // Top-right wallet buttons
+                if (connectBtn && walletManager) {
+                    connectBtn.addEventListener('click', async () => {
+                        try {
+                            await walletManager.connect();
+                        } catch (error) {
+                            console.error('Wallet connect error:', error);
+                        }
+                    });
+                }
+                
+                if (disconnectBtn && walletManager) {
+                    disconnectBtn.addEventListener('click', () => {
+                        try {
+                            walletManager.disconnect();
+                        } catch (error) {
+                            console.error('Wallet disconnect error:', error);
+                        }
+                    });
+                }
+                
+                // Menu wallet buttons
+                if (connectMenuBtn && walletManager) {
+                    connectMenuBtn.addEventListener('click', async () => {
+                        try {
+                            await walletManager.connect();
+                        } catch (error) {
+                            console.error('Wallet connect error:', error);
+                        }
+                    });
+                }
+                
+                if (disconnectMenuBtn && walletManager) {
+                    disconnectMenuBtn.addEventListener('click', () => {
+                        try {
+                            walletManager.disconnect();
+                        } catch (error) {
+                            console.error('Wallet disconnect error:', error);
+                        }
+                    });
+                }
+                
+                if (leaderboardBtn && game) {
+                    leaderboardBtn.addEventListener('click', () => {
+                        if (game.showLeaderboard) {
+                            game.showLeaderboard();
+                        }
+                    });
+                }
+                
+                if (leaderboardBtn2 && game) {
+                    leaderboardBtn2.addEventListener('click', () => {
+                        if (game.showLeaderboard) {
+                            game.showLeaderboard();
+                        }
+                    });
+                }
+                
+                if (closeLeaderboardBtn && game) {
+                    closeLeaderboardBtn.addEventListener('click', () => {
+                        if (game.hideLeaderboard) {
+                            game.hideLeaderboard();
+                        }
+                    });
+                }
+            } catch (initError) {
+                console.error('Initialization error:', initError);
+                console.error('Stack trace:', initError.stack);
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;padding:20px;z-index:9999;border-radius:10px;text-align:center;max-width:80%;';
+                errorDiv.innerHTML = '<h2>Initialization Error</h2><p>' + initError.message + '</p><p style="font-size:12px;margin-top:10px;">Check console for details</p>';
+                document.body.appendChild(errorDiv);
             }
-            
-            if (disconnectBtn) {
-                disconnectBtn.addEventListener('click', () => {
-                    walletManager.disconnect();
-                });
-            }
-            
-            // Menu wallet buttons
-            if (connectMenuBtn) {
-                connectMenuBtn.addEventListener('click', async () => {
-                    await walletManager.connect();
-                });
-            }
-            
-            if (disconnectMenuBtn) {
-                disconnectMenuBtn.addEventListener('click', () => {
-                    walletManager.disconnect();
-                });
-            }
-            
-            if (leaderboardBtn) {
-                leaderboardBtn.addEventListener('click', () => {
-                    game.showLeaderboard();
-                });
-            }
-            
-            if (leaderboardBtn2) {
-                leaderboardBtn2.addEventListener('click', () => {
-                    game.showLeaderboard();
-                });
-            }
-            
-            if (closeLeaderboardBtn) {
-                closeLeaderboardBtn.addEventListener('click', () => {
-                    game.hideLeaderboard();
-                });
+        }
+        
+        // Try multiple load events for better mobile compatibility
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('DOMContentLoaded fired');
+                setTimeout(initializeGame, 100); // Small delay for mobile browsers
+            });
+        } else {
+            // DOM already loaded, run immediately with small delay
+            console.log('DOM already loaded, initializing...');
+            setTimeout(initializeGame, 100);
+        }
+        
+        // Also wait for window load for external resources (backup)
+        window.addEventListener('load', () => {
+            console.log('Window load event fired');
+            // Only initialize if not already done
+            if (!game) {
+                console.log('Game not initialized yet, initializing now...');
+                setTimeout(initializeGame, 100);
             }
         });
+        
+        // Immediate fallback for mobile browsers that might not fire events correctly
+        setTimeout(() => {
+            if (!game) {
+                console.log('Fallback initialization triggered');
+                initializeGame();
+            }
+        }, 500);
     </script>
 </body>
 </html>

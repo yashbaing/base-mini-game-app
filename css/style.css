@@ -15,10 +15,10 @@ body {
     min-height: 100vh;
     min-height: -webkit-fill-available; /* iOS Safari */
     overflow: hidden;
-    position: fixed; /* Prevent scrolling on mobile */
+    position: relative; /* Changed from fixed to relative for better mobile compatibility */
     width: 100%;
     height: 100%;
-    touch-action: none; /* Prevent touch gestures */
+    touch-action: manipulation; /* Changed from none to manipulation for better mobile compatibility */
     -webkit-touch-callout: none; /* Disable callout on iOS */
     -webkit-user-select: none; /* Prevent text selection */
     user-select: none;

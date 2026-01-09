@@ -11,6 +11,13 @@ class WalletManager {
 
     async connect() {
         try {
+            // Check if ethers.js is loaded
+            if (typeof ethers === 'undefined') {
+                console.warn('ethers.js not loaded yet, wallet functionality disabled');
+                alert('Wallet functionality is temporarily unavailable. The game will work without wallet connection.');
+                return false;
+            }
+            
             if (typeof window.ethereum === 'undefined') {
                 alert('Please install MetaMask or another Web3 wallet!');
                 return false;
