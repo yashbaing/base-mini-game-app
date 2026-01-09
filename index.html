@@ -181,11 +181,34 @@
                     game.init();
                     console.log('Game initialized successfully!');
                     
-                    // Hide loading screen
-                    const loadingScreen = document.getElementById('loading-screen');
-                    if (loadingScreen) {
-                        loadingScreen.style.display = 'none';
+                    // Ensure menu screen is visible and interactive
+                    if (game.menuScreen) {
+                        game.menuScreen.classList.remove('hidden');
+                        game.menuScreen.style.display = 'flex';
+                        game.menuScreen.style.pointerEvents = 'auto';
+                        game.menuScreen.style.zIndex = '100';
+                        console.log('Menu screen confirmed visible');
+                        
+                        // Double-check start button is accessible
+                        const startBtn = document.getElementById('start-button');
+                        if (startBtn) {
+                            startBtn.style.pointerEvents = 'auto';
+                            startBtn.style.touchAction = 'manipulation';
+                            startBtn.style.zIndex = '1001';
+                            console.log('Start button confirmed accessible');
+                        } else {
+                            console.error('Start button still not found after game init!');
+                        }
                     }
+                    
+                    // Hide loading screen after short delay
+                    setTimeout(() => {
+                        const loadingScreen = document.getElementById('loading-screen');
+                        if (loadingScreen) {
+                            loadingScreen.style.display = 'none';
+                            console.log('Loading screen hidden');
+                        }
+                    }, 400);
                 } catch (gameError) {
                     console.error('Game initialization failed:', gameError);
                     console.error('Stack trace:', gameError.stack);
@@ -275,70 +298,98 @@
                 const leaderboardBtn2 = document.getElementById('leaderboard-button-2');
                 const closeLeaderboardBtn = document.getElementById('close-leaderboard');
                 
-                // Top-right wallet buttons
+                // Helper to add touch and click events for mobile compatibility
+                const addTouchClickListener = (element, handler, name) => {
+                    if (!element) {
+                        console.warn('Element not found:', name);
+                        return;
+                    }
+                    
+                    const safeHandler = (e) => {
+                        if (e.cancelable) e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Button triggered:', name, e.type);
+                        try {
+                            handler();
+                        } catch (err) {
+                            console.error('Error in handler for', name, ':', err);
+                        }
+                    };
+                    
+                    element.style.pointerEvents = 'auto';
+                    element.style.touchAction = 'manipulation';
+                    element.style.webkitTapHighlightColor = 'rgba(0,0,0,0)';
+                    element.style.minHeight = '44px'; // Minimum touch target
+                    
+                    element.addEventListener('click', safeHandler, { passive: false });
+                    element.addEventListener('touchend', safeHandler, { passive: false });
+                    
+                    console.log('Set up touch listener for:', name);
+                };
+                
+                // Wallet buttons with touch support
                 if (connectBtn && walletManager) {
-                    connectBtn.addEventListener('click', async () => {
+                    addTouchClickListener(connectBtn, async () => {
                         try {
                             await walletManager.connect();
                         } catch (error) {
                             console.error('Wallet connect error:', error);
                         }
-                    });
+                    }, 'wallet-connect-btn');
                 }
                 
                 if (disconnectBtn && walletManager) {
-                    disconnectBtn.addEventListener('click', () => {
+                    addTouchClickListener(disconnectBtn, () => {
                         try {
                             walletManager.disconnect();
                         } catch (error) {
                             console.error('Wallet disconnect error:', error);
                         }
-                    });
+                    }, 'wallet-disconnect-btn');
                 }
                 
-                // Menu wallet buttons
                 if (connectMenuBtn && walletManager) {
-                    connectMenuBtn.addEventListener('click', async () => {
+                    addTouchClickListener(connectMenuBtn, async () => {
                         try {
                             await walletManager.connect();
                         } catch (error) {
                             console.error('Wallet connect error:', error);
                         }
-                    });
+                    }, 'wallet-connect-menu-btn');
                 }
                 
                 if (disconnectMenuBtn && walletManager) {
-                    disconnectMenuBtn.addEventListener('click', () => {
+                    addTouchClickListener(disconnectMenuBtn, () => {
                         try {
                             walletManager.disconnect();
                         } catch (error) {
                             console.error('Wallet disconnect error:', error);
                         }
-                    });
+                    }, 'wallet-disconnect-menu-btn');
                 }
                 
                 if (leaderboardBtn && game) {
-                    leaderboardBtn.addEventListener('click', () => {
+                    addTouchClickListener(leaderboardBtn, () => {
                         if (game.showLeaderboard) {
                             game.showLeaderboard();
                         }
-                    });
+                    }, 'leaderboard-button');
                 }
                 
                 if (leaderboardBtn2 && game) {
-                    leaderboardBtn2.addEventListener('click', () => {
+                    addTouchClickListener(leaderboardBtn2, () => {
                         if (game.showLeaderboard) {
                             game.showLeaderboard();
                         }
-                    });
+                    }, 'leaderboard-button-2');
                 }
                 
                 if (closeLeaderboardBtn && game) {
-                    closeLeaderboardBtn.addEventListener('click', () => {
+                    addTouchClickListener(closeLeaderboardBtn, () => {
                         if (game.hideLeaderboard) {
                             game.hideLeaderboard();
                         }
-                    });
+                    }, 'close-leaderboard');
                 }
             } catch (initError) {
                 console.error('Initialization error:', initError);

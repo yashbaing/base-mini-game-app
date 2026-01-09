@@ -134,13 +134,14 @@ body::before {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     color: #fff;
-    pointer-events: all;
+    pointer-events: auto !important; /* Ensure screen is interactive */
     z-index: 20;
     animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 20px;
     padding: 10px;
     box-sizing: border-box;
     overflow: hidden;
+    touch-action: manipulation; /* Allow touch interaction */
 }
 
 @keyframes fadeIn {
@@ -524,7 +525,7 @@ button {
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: all;
+    pointer-events: auto !important; /* Force pointer events */
     position: relative;
     overflow: hidden;
     box-shadow: 0 6px 20px rgba(0, 82, 255, 0.4),
@@ -535,6 +536,15 @@ button {
     width: 100%;
     max-width: 300px;
     flex-shrink: 0;
+    touch-action: manipulation !important; /* Critical for mobile */
+    -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+    -webkit-user-select: none;
+    user-select: none;
+    z-index: 1000; /* Ensure buttons are above other elements */
+    min-height: 44px; /* Minimum touch target size for mobile */
+    display: flex; /* Ensure flex display */
+    align-items: center;
+    justify-content: center;
 }
 
 button::before {
