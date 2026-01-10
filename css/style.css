@@ -177,7 +177,7 @@ body::before {
     opacity: 1 !important;
     min-height: 100% !important; /* Ensure game over screen takes full height */
     height: 100% !important; /* Force full height */
-    padding: 2px !important; /* Minimal padding for maximum space */
+    padding: 1px !important; /* Absolute minimal padding for maximum space */
 }
 
 @keyframes fadeIn {
@@ -238,15 +238,15 @@ body::before {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start; /* Changed from center to flex-start for mobile */
-    gap: 4px; /* Very small gap for maximum space */
+    gap: 3px; /* Very small gap for maximum space */
     width: 100%;
     max-width: 520px;
     animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 4px 8px 8px 8px; /* Minimal padding for maximum vertical space */
+    padding: 2px 6px 6px 6px; /* Even more minimal padding for maximum vertical space */
     box-sizing: border-box;
-    min-height: 98%; /* Take almost full screen height */
-    height: 98%; /* Force full height */
-    max-height: 100%; /* Use 100% of parent instead of 100vh */
+    min-height: 100% !important; /* Take full screen height */
+    height: 100% !important; /* Force full height */
+    max-height: 100% !important; /* Use 100% of parent */
     overflow-y: auto; /* Allow scrolling if content overflows */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
     overflow-x: hidden; /* Prevent horizontal scroll */
@@ -945,16 +945,16 @@ button:active {
     #game-over-screen {
         min-height: 100% !important; /* Force full height on game over screen */
         height: 100% !important;
-        padding: 2px 4px 8px 4px !important; /* Even more minimal padding for maximum space */
+        padding: 1px 3px 6px 3px !important; /* Absolute minimal padding for maximum space */
     }
     
     /* Game Over Screen - Maximum vertical space */
     #game-over-screen .game-over-content {
-        min-height: 98% !important; /* Take almost full screen height */
-        height: 98% !important; /* Force full height */
-        padding: 3px 6px 10px 6px !important; /* Minimal padding with bottom space */
-        gap: 3px !important; /* Very small gap for maximum space */
-        padding-bottom: 10px !important; /* Extra space for buttons */
+        min-height: 100% !important; /* Take full screen height */
+        height: 100% !important; /* Force full height */
+        padding: 2px 5px 8px 5px !important; /* Minimal padding with bottom space */
+        gap: 2px !important; /* Very small gap for maximum space */
+        padding-bottom: 8px !important; /* Extra space for buttons */
     }
     
     /* Reduce all game over screen element sizes for better fit */
@@ -1061,16 +1061,16 @@ button:active {
     
     /* Additional game-over-content override for better fit */
     #game-over-screen .game-over-content {
-        padding: 3px 5px 10px 5px !important; /* Even more minimal padding */
-        gap: 3px !important; /* Very small gap */
-        min-height: 98% !important; /* Take almost full parent height */
-        height: 98% !important; /* Force full height */
+        padding: 2px 4px 8px 4px !important; /* Absolute minimal padding */
+        gap: 2px !important; /* Very small gap */
+        min-height: 100% !important; /* Take full parent height */
+        height: 100% !important; /* Force full height */
         max-height: 100% !important; /* Use 100% of parent */
-        padding-bottom: 10px !important; /* Ensure buttons are visible */
+        padding-bottom: 8px !important; /* Ensure buttons are visible */
     }
     
     #game-over-screen {
-        padding: 2px 4px 8px 4px !important; /* Minimal padding for maximum space */
+        padding: 1px 3px 6px 3px !important; /* Absolute minimal padding for maximum space */
     }
     
     .score-container {
@@ -1278,17 +1278,17 @@ button:active {
     }
     
     .game-over-content {
-        padding: 3px 5px 10px 5px !important; /* Even more minimal padding */
-        gap: 3px !important; /* Very small gap */
-        min-height: 98% !important; /* Take almost full parent height */
-        height: 98% !important; /* Force full height */
+        padding: 2px 4px 8px 4px !important; /* Absolute minimal padding */
+        gap: 2px !important; /* Very small gap */
+        min-height: 100% !important; /* Take full parent height */
+        height: 100% !important; /* Force full height */
         max-height: 100% !important; /* Use 100% of parent */
     }
     
     #game-over-screen {
         min-height: 100% !important; /* Ensure full height on small screens */
         height: 100% !important;
-        padding: 2px 3px 8px 3px !important; /* Even less padding on very small screens */
+        padding: 1px 2px 6px 2px !important; /* Absolute minimal padding on very small screens */
     }
     
     .score-container {
