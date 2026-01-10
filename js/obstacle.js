@@ -15,42 +15,42 @@ class Obstacle {
     setupByType() {
         switch (this.type) {
             case 'bug':
-                // Small, fast crypto bugs
-                this.width = 35;
-                this.height = 35;
+                // Small, fast crypto bugs - made smaller for better engagement
+                this.width = 25;
+                this.height = 25;
                 this.color = '#FF4444';
                 this.secondaryColor = '#FF8888';
                 break;
                 
             case 'glitch':
-                // Medium, irregular glitches
-                this.width = 45;
-                this.height = 50;
+                // Medium, irregular glitches - made smaller
+                this.width = 32;
+                this.height = 35;
                 this.color = '#FF00FF';
                 this.secondaryColor = '#FF88FF';
                 this.glitchOffset = 0;
                 break;
                 
             case 'rugpull':
-                // Large, slow-moving rug pulls
-                this.width = 70;
-                this.height = 60;
+                // Large, slow-moving rug pulls - made smaller
+                this.width = 50;
+                this.height = 42;
                 this.color = '#FF6600';
                 this.secondaryColor = '#FFAA44';
                 break;
                 
             case 'block':
-                // Ground broken blocks
-                this.width = 60;
-                this.height = 45;
+                // Ground broken blocks - made smaller
+                this.width = 42;
+                this.height = 32;
                 this.color = '#666666';
                 this.secondaryColor = '#999999';
                 this.isGroundObstacle = true;
                 break;
                 
             default:
-                this.width = 30;
-                this.height = 30;
+                this.width = 25;
+                this.height = 25;
                 this.color = '#FF0000';
                 this.secondaryColor = '#FF6666';
         }
@@ -283,7 +283,7 @@ class ObstacleManager {
         this.lastSpawnTime = 0;
         this.spawnInterval = 2000; // Initial spawn interval in ms
         this.minSpawnInterval = 800; // Minimum spawn interval
-        this.baseSpeed = 5;
+        this.baseSpeed = 4; // Medium speed for obstacles (reduced from 5)
     }
 
     /**
@@ -293,11 +293,8 @@ class ObstacleManager {
      * @param {number} score - Current score (affects spawn rate)
      */
     update(gameSpeed, currentTime, score) {
-        // Update spawn interval based on score
-        this.spawnInterval = Math.max(
-            this.minSpawnInterval,
-            2000 - (score * 0.5)
-        );
+        // Keep spawn interval constant at medium rate with more spacing for better engagement
+        this.spawnInterval = 2200; // Increased spawn interval for more spacing between obstacles
         
         // Spawn new obstacles
         if (currentTime - this.lastSpawnTime > this.spawnInterval) {
@@ -384,6 +381,14 @@ class ObstacleManager {
      */
     getObstacles() {
         return this.obstacles.filter(obs => obs.active);
+    }
+
+    /**
+     * Get all active obstacles (alias for getObstacles for consistency)
+     * @returns {Array} Array of active obstacles
+     */
+    getActiveObstacles() {
+        return this.getObstacles();
     }
 
     /**

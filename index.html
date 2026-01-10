@@ -188,17 +188,134 @@
                         game.menuScreen.style.pointerEvents = 'auto';
                         game.menuScreen.style.zIndex = '100';
                         console.log('Menu screen confirmed visible');
+                    }
+                    
+                    // Add MULTIPLE direct event listeners to start button - CRITICAL FIX
+                    const startBtn = document.getElementById('start-button');
+                    if (startBtn) {
+                        console.log('Adding direct start button listeners as PRIMARY handlers...');
                         
-                        // Double-check start button is accessible
-                        const startBtn = document.getElementById('start-button');
-                        if (startBtn) {
-                            startBtn.style.pointerEvents = 'auto';
-                            startBtn.style.touchAction = 'manipulation';
-                            startBtn.style.zIndex = '1001';
-                            console.log('Start button confirmed accessible');
-                        } else {
-                            console.error('Start button still not found after game init!');
+                        // Make button highly interactive
+                        startBtn.style.pointerEvents = 'auto';
+                        startBtn.style.touchAction = 'manipulation';
+                        startBtn.style.cursor = 'pointer';
+                        startBtn.style.zIndex = '10000';
+                        startBtn.style.position = 'relative';
+                        startBtn.style.minHeight = '44px';
+                        startBtn.style.display = 'flex';
+                        
+                        const directHandler = (e) => {
+                            console.log('=== DIRECT START BUTTON HANDLER TRIGGERED ===', e ? e.type : 'direct');
+                            if (e) {
+                                if (e.preventDefault) e.preventDefault();
+                                if (e.stopPropagation) e.stopPropagation();
+                                if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+                            }
+                            
+                            // Check if game exists and is ready
+                            if (!game) {
+                                console.error('Game object is null/undefined!');
+                                alert('Game not initialized! Please refresh the page.');
+                                return false;
+                            }
+                            
+                            if (typeof game.startGame !== 'function') {
+                                console.error('game.startGame is not a function!', typeof game.startGame);
+                                alert('Start game function not found! Please refresh the page.');
+                                return false;
+                            }
+                            
+                            try {
+                                console.log('Calling game.startGame()...');
+                                console.log('Current game state before:', game.state);
+                                game.startGame();
+                                console.log('Game state after startGame():', game.state);
+                                
+                                // Verify menu is hidden
+                                setTimeout(() => {
+                                    const menu = document.getElementById('menu-screen');
+                                    if (menu) {
+                                        console.log('Menu screen visibility check:', {
+                                            hasHiddenClass: menu.classList.contains('hidden'),
+                                            display: window.getComputedStyle(menu).display,
+                                            visibility: window.getComputedStyle(menu).visibility,
+                                            opacity: window.getComputedStyle(menu).opacity
+                                        });
+                                        
+                                        // Force hide if not hidden
+                                        if (!menu.classList.contains('hidden') || window.getComputedStyle(menu).display !== 'none') {
+                                            console.log('Forcing menu to hide...');
+                                            menu.classList.add('hidden');
+                                            menu.style.display = 'none';
+                                            menu.style.visibility = 'hidden';
+                                            menu.style.opacity = '0';
+                                        }
+                                    }
+                                }, 100);
+                                
+                            } catch (err) {
+                                console.error('Error in direct handler:', err);
+                                console.error('Error stack:', err.stack);
+                                alert('Error starting game: ' + (err.message || String(err)));
+                            }
+                            
+                            return false;
+                        };
+                        
+                        // REMOVE ALL existing handlers by cloning
+                        const parent = startBtn.parentNode;
+                        const newBtn = startBtn.cloneNode(true);
+                        parent.replaceChild(newBtn, startBtn);
+                        const cleanBtn = document.getElementById('start-button');
+                        
+                        if (!cleanBtn) {
+                            console.error('Failed to get button after clone!');
+                            return;
                         }
+                        
+                        // Make button interactive
+                        cleanBtn.style.pointerEvents = 'auto';
+                        cleanBtn.style.touchAction = 'manipulation';
+                        cleanBtn.style.cursor = 'pointer';
+                        cleanBtn.style.zIndex = '10000';
+                        cleanBtn.style.minHeight = '44px';
+                        cleanBtn.style.display = 'flex';
+                        cleanBtn.style.position = 'relative';
+                        
+                        // SINGLE SIMPLE HANDLER - just onclick
+                        cleanBtn.onclick = function(e) {
+                            console.log('=== START BUTTON CLICKED ===', e.type);
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            if (!game || typeof game.startGame !== 'function') {
+                                alert('Game not ready! Refresh page.');
+                                return false;
+                            }
+                            
+                            console.log('Starting game... State before:', game.state);
+                            game.startGame();
+                            console.log('State after:', game.state);
+                            
+                            return false;
+                        };
+                        
+                        // Mobile touch handler
+                        cleanBtn.addEventListener('touchend', function(e) {
+                            console.log('=== START BUTTON TOUCHED ===');
+                            e.preventDefault();
+                            e.stopPropagation();
+                            cleanBtn.onclick(e);
+                        }, { passive: false });
+                        
+                        console.log('Start button handler set up. onclick:', typeof cleanBtn.onclick);
+                    } else {
+                        console.error('CRITICAL: Start button not found for direct listener!');
+                        // Create a visible error message
+                        const errorMsg = document.createElement('div');
+                        errorMsg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;padding:20px;z-index:99999;border-radius:10px;';
+                        errorMsg.textContent = 'ERROR: Start button not found! Check console for details.';
+                        document.body.appendChild(errorMsg);
                     }
                     
                     // Hide loading screen after short delay
@@ -208,7 +325,7 @@
                             loadingScreen.style.display = 'none';
                             console.log('Loading screen hidden');
                         }
-                    }, 400);
+                    }, 500);
                 } catch (gameError) {
                     console.error('Game initialization failed:', gameError);
                     console.error('Stack trace:', gameError.stack);
@@ -412,51 +529,78 @@
         // Initialize game when DOM is ready and scripts are loaded
         function startInitialization() {
             // Check if all required classes are loaded
-            if (typeof Game === 'undefined' || typeof InputHandler === 'undefined') {
-                console.warn('Game classes not loaded yet, retrying...');
+            if (typeof Game === 'undefined') {
+                console.warn('Game class not loaded yet, retrying...');
+                setTimeout(startInitialization, 100);
+                return;
+            }
+            
+            if (typeof InputHandler === 'undefined') {
+                console.warn('InputHandler class not loaded yet, retrying...');
                 setTimeout(startInitialization, 100);
                 return;
             }
             
             console.log('All scripts loaded, starting initialization...');
-            initializeGame();
+            console.log('Game class available:', typeof Game !== 'undefined');
+            console.log('InputHandler class available:', typeof InputHandler !== 'undefined');
+            
+            // Small delay to ensure DOM is fully ready
+            setTimeout(() => {
+                initializeGame();
+            }, 100);
         }
         
-        // Try multiple load events for better mobile compatibility
+        // Try multiple initialization strategies for maximum compatibility
+        let initAttempted = false;
+        
+        function tryInitialize() {
+            if (initAttempted) return;
+            initAttempted = true;
+            console.log('Attempting initialization...');
+            startInitialization();
+        }
+        
+        // Strategy 1: DOMContentLoaded
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 console.log('DOMContentLoaded fired');
-                setTimeout(startInitialization, 200); // Small delay for mobile browsers
+                tryInitialize();
             });
         } else {
             // DOM already loaded
-            console.log('DOM already loaded, starting initialization...');
-            setTimeout(startInitialization, 200);
+            console.log('DOM already loaded');
+            setTimeout(tryInitialize, 100);
         }
         
-        // Also wait for window load for external resources (backup)
+        // Strategy 2: Window load (backup)
         window.addEventListener('load', () => {
             console.log('Window load event fired');
-            // Only initialize if not already done
-            if (!game) {
-                console.log('Game not initialized yet, initializing now...');
-                setTimeout(startInitialization, 200);
-            }
+            setTimeout(() => {
+                if (!game) {
+                    console.log('Game not initialized yet, trying again...');
+                    initAttempted = false; // Reset flag
+                    tryInitialize();
+                }
+            }, 200);
         });
         
-        // Fallback initialization for mobile browsers that might not fire events correctly
+        // Strategy 3: Fallback timeout (last resort)
         setTimeout(() => {
-            if (!game && typeof Game !== 'undefined') {
-                console.log('Fallback initialization triggered');
-                startInitialization();
-            } else if (typeof Game === 'undefined') {
-                console.error('Game class not found after timeout');
-                const loadingScreen = document.getElementById('loading-screen');
-                const errorDiv = document.getElementById('loading-error');
-                if (loadingScreen && errorDiv) {
-                    loadingScreen.style.background = 'linear-gradient(135deg, #8B0000 0%, #FF0000 100%)';
-                    errorDiv.style.display = 'block';
-                    errorDiv.innerHTML = '<strong>Script Loading Error</strong><br>Game scripts failed to load. Please check your internet connection and refresh the page.';
+            if (!game) {
+                if (typeof Game === 'undefined' || typeof InputHandler === 'undefined') {
+                    console.error('Game classes not found after 2 seconds');
+                    const loadingScreen = document.getElementById('loading-screen');
+                    const errorDiv = document.getElementById('loading-error');
+                    if (loadingScreen && errorDiv) {
+                        loadingScreen.style.background = 'linear-gradient(135deg, #8B0000 0%, #FF0000 100%)';
+                        errorDiv.style.display = 'block';
+                        errorDiv.innerHTML = '<strong>Script Loading Error</strong><br>Game scripts failed to load. Please check your internet connection and refresh the page.<br><br>Missing classes: ' + (typeof Game === 'undefined' ? 'Game ' : '') + (typeof InputHandler === 'undefined' ? 'InputHandler' : '');
+                    }
+                } else {
+                    console.log('Fallback initialization triggered');
+                    initAttempted = false; // Reset flag
+                    tryInitialize();
                 }
             }
         }, 2000);

@@ -2,15 +2,31 @@
 
 /**
  * Check collision between two rectangles using AABB (Axis-Aligned Bounding Box)
+ * With padding for more forgiving collision detection (better engagement)
  * @param {Object} rect1 - First rectangle with x, y, width, height
  * @param {Object} rect2 - Second rectangle with x, y, width, height
+ * @param {number} padding - Padding to shrink collision boxes for more forgiving detection (default: 0)
  * @returns {boolean} True if rectangles collide
  */
-function checkCollision(rect1, rect2) {
-    return rect1.x < rect2.x + rect2.width &&
-           rect1.x + rect1.width > rect2.x &&
-           rect1.y < rect2.y + rect2.height &&
-           rect1.y + rect1.height > rect2.y;
+function checkCollision(rect1, rect2, padding = 4) {
+    // Shrink both rectangles by padding for more forgiving collision
+    const r1 = {
+        x: rect1.x + padding,
+        y: rect1.y + padding,
+        width: rect1.width - (padding * 2),
+        height: rect1.height - (padding * 2)
+    };
+    const r2 = {
+        x: rect2.x + padding,
+        y: rect2.y + padding,
+        width: rect2.width - (padding * 2),
+        height: rect2.height - (padding * 2)
+    };
+    
+    return r1.x < r2.x + r2.width &&
+           r1.x + r1.width > r2.x &&
+           r1.y < r2.y + r2.height &&
+           r1.y + r1.height > r2.y;
 }
 
 /**
