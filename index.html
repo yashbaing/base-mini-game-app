@@ -67,7 +67,6 @@
                     </div>
                     <div class="button-group">
                         <button id="restart-button">Play Again</button>
-                        <button id="refresh-button" class="secondary-btn" title="Refresh Page">🔄 Refresh</button>
                         <button id="leaderboard-button-2" class="secondary-btn">Leaderboard</button>
                     </div>
                 </div>
@@ -570,15 +569,6 @@
                     }, 'close-leaderboard');
                 }
                 
-                // Refresh button handler
-                const refreshBtn = document.getElementById('refresh-button');
-                if (refreshBtn) {
-                    addTouchClickListener(refreshBtn, () => {
-                        if (confirm('Refresh the page? Your current game progress will be lost.')) {
-                            window.location.reload();
-                        }
-                    }, 'refresh-button');
-                }
             } catch (initError) {
                 console.error('Initialization error:', initError);
                 console.error('Stack trace:', initError.stack);

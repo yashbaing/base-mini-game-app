@@ -89,7 +89,6 @@ class Game {
         this.shareXButton = document.getElementById('share-x-button');
         this.shareTwitterButton = document.getElementById('share-twitter-button');
         this.shareButton = document.getElementById('share-button');
-        this.refreshButton = document.getElementById('refresh-button');
         
         console.log('UI elements found:', {
             menuScreen: !!this.menuScreen,
@@ -234,17 +233,6 @@ class Game {
         }
         if (this.shareButton) {
             setupButton('share-button', () => this.shareGeneric(), 'share-button');
-        }
-        
-        // Refresh button
-        if (this.refreshButton) {
-            setupButton('refresh-button', () => {
-                console.log('=== REFRESH BUTTON CLICKED ===');
-                // Reload the page to refresh the app
-                if (confirm('Refresh the page? Your current game progress will be lost.')) {
-                    window.location.reload();
-                }
-            }, 'refresh-button');
         }
         
         console.log('=== UI listeners setup complete ===');
