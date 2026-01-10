@@ -111,6 +111,13 @@ class Game {
             this.leaderboardScreen.classList.add('hidden');
         }
         
+        // Hide wallet select modal initially
+        const walletModal = document.getElementById('wallet-select-modal');
+        if (walletModal) {
+            walletModal.classList.add('hidden');
+            walletModal.style.display = 'none';
+        }
+        
         // Setup UI listeners IMMEDIATELY - don't wait
         this.setupUIListeners();
         console.log('Game constructor complete');

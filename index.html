@@ -78,6 +78,34 @@
                 </div>
                 <button id="close-leaderboard">Close</button>
             </div>
+            
+            <!-- Mobile Wallet Selection Modal -->
+            <div id="wallet-select-modal" class="screen hidden" style="display: none !important; z-index: 30;">
+                <div class="wallet-select-content">
+                    <h2>Choose Your Wallet</h2>
+                    <p class="wallet-select-subtitle">Select a wallet to connect</p>
+                    <div class="wallet-options">
+                        <button class="wallet-option-btn" data-wallet="metamask" type="button">
+                            <span class="wallet-icon">🦊</span>
+                            <span class="wallet-name">MetaMask</span>
+                        </button>
+                        <button class="wallet-option-btn" data-wallet="trust" type="button">
+                            <span class="wallet-icon">🔒</span>
+                            <span class="wallet-name">Trust Wallet</span>
+                        </button>
+                        <button class="wallet-option-btn" data-wallet="coinbase" type="button">
+                            <span class="wallet-icon">🔷</span>
+                            <span class="wallet-name">Coinbase Wallet</span>
+                        </button>
+                        <button class="wallet-option-btn" data-wallet="browser" type="button">
+                            <span class="wallet-icon">🌐</span>
+                            <span class="wallet-name">Browser Wallet</span>
+                        </button>
+                    </div>
+                    <button class="wallet-download-btn secondary-btn" id="show-download-options" type="button">📥 Download Wallet Apps</button>
+                    <button class="secondary-btn" id="cancel-wallet-select" type="button">Cancel</button>
+                </div>
+            </div>
         </div>
     </div>
     
