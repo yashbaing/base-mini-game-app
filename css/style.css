@@ -1623,6 +1623,118 @@ button {
     min-height: 48px;
 }
 
+/* Payment Modal Styles */
+#payment-modal {
+    z-index: 31 !important;
+}
+
+#payment-modal:not(.hidden) {
+    z-index: 31 !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+#payment-modal.hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+}
+
+#payment-status {
+    font-size: 15px;
+    font-weight: 500;
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#payment-tx-hash {
+    font-size: 12px;
+    word-break: break-all;
+    text-align: center;
+    padding: 8px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    max-width: 100%;
+}
+
+#payment-tx-hash a {
+    color: #4CAF50;
+    text-decoration: underline;
+}
+
+#payment-button {
+    background: linear-gradient(135deg, #0052FF 0%, #0052FF 100%) !important;
+    border: 2px solid rgba(0, 82, 255, 0.6) !important;
+    font-weight: 700 !important;
+    font-size: 17px !important;
+    min-height: 56px !important;
+    margin-top: 10px;
+}
+
+#payment-button:hover {
+    background: linear-gradient(135deg, #0040CC 0%, #0040CC 100%) !important;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 82, 255, 0.5);
+}
+
+#payment-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#payment-button:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+@media (max-width: 600px) {
+    #payment-modal {
+        z-index: 31 !important;
+        padding: 8px !important;
+    }
+    
+    #payment-status {
+        font-size: 14px;
+        padding: 10px;
+        min-height: 40px;
+    }
+    
+    #payment-button {
+        font-size: 16px !important;
+        min-height: 52px !important;
+        padding: 14px 20px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #payment-modal {
+        padding: 6px !important;
+    }
+    
+    #payment-status {
+        font-size: 13px;
+        padding: 8px;
+        min-height: 38px;
+    }
+    
+    #payment-button {
+        font-size: 15px !important;
+        min-height: 48px !important;
+        padding: 12px 18px !important;
+    }
+}
+
 .wallet-menu-btn {
     padding: 14px 36px;
     font-size: 15px;

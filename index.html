@@ -113,6 +113,30 @@
                     <button class="secondary-btn" id="cancel-wallet-select" type="button">Cancel</button>
                 </div>
             </div>
+            
+            <!-- Payment Modal -->
+            <div id="payment-modal" class="screen hidden" style="display: none !important; z-index: 31;">
+                <div class="wallet-select-content">
+                    <h2>Pay Entry Fee</h2>
+                    <p class="wallet-select-subtitle">To play the game, you need to pay an entry fee</p>
+                    <div style="text-align: center; margin: 20px 0; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 10px;">
+                        <p style="font-size: 24px; font-weight: bold; margin: 10px 0; color: #FFD700;">0.00001 USDC</p>
+                        <p style="font-size: 14px; color: #ccc; margin: 5px 0;">Network: Base</p>
+                        <p style="font-size: 12px; color: #999; margin: 5px 0;">Gas fees may apply</p>
+                    </div>
+                    <div id="payment-status" style="text-align: center; margin: 15px 0; padding: 10px; font-size: 14px; color: #ccc;">
+                        Ready to pay
+                    </div>
+                    <div id="payment-tx-hash" style="text-align: center; margin: 10px 0; font-size: 12px; color: #4CAF50; display: none; word-break: break-all;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                        <button id="payment-button" class="wallet-option-btn" type="button" style="background: linear-gradient(135deg, #0052FF 0%, #0052FF 100%);">
+                            Pay 0.00001 USDC
+                        </button>
+                        <button id="cancel-payment" class="secondary-btn" type="button">Cancel</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -299,7 +323,11 @@
                             try {
                                 console.log('Calling game.startGame()...');
                                 console.log('Current game state before:', game.state);
-                                game.startGame();
+                                // Handle async startGame
+                                game.startGame().catch(err => {
+                                    console.error('Error starting game:', err);
+                                    alert('Error starting game: ' + (err.message || 'Unknown error'));
+                                });
                                 console.log('Game state after startGame():', game.state);
                                 
                                 // Verify menu is hidden
@@ -365,8 +393,12 @@
                             }
                             
                             console.log('Starting game... State before:', game.state);
-                            game.startGame();
-                            console.log('State after:', game.state);
+                            // Handle async startGame
+                            game.startGame().catch(err => {
+                                console.error('Error starting game:', err);
+                                alert('Error starting game: ' + (err.message || 'Unknown error'));
+                            });
+                            console.log('State after (may be pending):', game.state);
                             
                             return false;
                         };

@@ -118,9 +118,45 @@ class Game {
             walletModal.style.display = 'none';
         }
         
+        // Hide payment modal initially
+        const paymentModal = document.getElementById('payment-modal');
+        if (paymentModal) {
+            paymentModal.classList.add('hidden');
+            paymentModal.style.display = 'none';
+        }
+        
         // Setup UI listeners IMMEDIATELY - don't wait
         this.setupUIListeners();
         console.log('Game constructor complete');
+    }
+    
+    showPaymentModal() {
+        const paymentModal = document.getElementById('payment-modal');
+        if (!paymentModal) {
+            alert('Payment modal not found! Please refresh the page.');
+            return;
+        }
+        
+        paymentModal.classList.remove('hidden');
+        paymentModal.style.setProperty('display', 'flex', 'important');
+        paymentModal.style.setProperty('z-index', '31', 'important');
+        paymentModal.style.setProperty('visibility', 'visible', 'important');
+        paymentModal.style.setProperty('opacity', '1', 'important');
+        
+        // Reset payment UI
+        if (this.walletManager) {
+            this.walletManager.updatePaymentUI('ready');
+        }
+    }
+    
+    hidePaymentModal() {
+        const paymentModal = document.getElementById('payment-modal');
+        if (paymentModal) {
+            paymentModal.classList.add('hidden');
+            paymentModal.style.setProperty('display', 'none', 'important');
+            paymentModal.style.setProperty('visibility', 'hidden', 'important');
+            paymentModal.style.setProperty('opacity', '0', 'important');
+        }
     }
 
     setupCanvas() {
@@ -225,9 +261,14 @@ class Game {
         
         // Restart button
         if (this.restartButton) {
-            setupButton('restart-button', () => {
+            setupButton('restart-button', async () => {
                 console.log('=== RESTART GAME BUTTON CLICKED ===');
-                this.startGame();
+                try {
+                    await this.startGame();
+                } catch (err) {
+                    console.error('Error restarting game:', err);
+                    alert('Error restarting game: ' + (err.message || 'Unknown error'));
+                }
             }, 'restart-button');
         }
         
@@ -242,7 +283,38 @@ class Game {
             setupButton('share-button', () => this.shareGeneric(), 'share-button');
         }
         
+        // Payment modal buttons
+        setupButton('payment-button', () => this.handlePayment(), 'payment-button');
+        setupButton('cancel-payment', () => this.hidePaymentModal(), 'cancel-payment');
+        
         console.log('=== UI listeners setup complete ===');
+    }
+    
+    async handlePayment() {
+        if (!this.walletManager) {
+            alert('Wallet manager not available! Please refresh the page.');
+            return;
+        }
+        
+        if (!this.walletManager.isConnected) {
+            alert('Please connect your wallet first!');
+            return;
+        }
+        
+        try {
+            const result = await this.walletManager.payEntryFee();
+            if (result.success) {
+                // Payment successful, hide modal and start game
+                setTimeout(() => {
+                    this.hidePaymentModal();
+                    // Start the game after payment
+                    this.actuallyStartGame();
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Payment error:', error);
+            alert('Payment failed: ' + (error.message || 'Unknown error'));
+        }
     }
 
     init() {
@@ -317,10 +389,33 @@ class Game {
         }
     }
 
-    startGame() {
+    async startGame() {
         console.log('=== START GAME CALLED ===');
         console.log('Current state:', this.state);
         
+        // Check if wallet is connected and payment is made
+        if (this.walletManager) {
+            if (!this.walletManager.isConnected) {
+                alert('Please connect your wallet first!\n\nYou need to connect a wallet and pay the entry fee to play.');
+                return;
+            }
+            
+            // Check if payment has been made
+            const hasPaid = await this.walletManager.hasPaidEntryFee();
+            if (!hasPaid) {
+                // Show payment modal
+                this.showPaymentModal();
+                return;
+            }
+        }
+        
+        // Actually start the game
+        this.actuallyStartGame();
+    }
+    
+    actuallyStartGame() {
+        // Internal method to actually start the game (without payment check)
+        console.log('=== ACTUALLY STARTING GAME ===');
         this.state = 'playing';
         this.score = 0;
         this.gameSpeed = 1.10; // Fixed medium speed + 10% faster - constant throughout game

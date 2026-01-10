@@ -7,6 +7,29 @@ class WalletManager {
         this.address = null;
         this.isConnected = false;
         this.leaderboard = this.loadLeaderboard();
+        
+        // Payment configuration
+        // USDC on Base network: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+        // Payment amount: 0.00001 USDC (10 units with 6 decimals)
+        // Note: paymentAmount is initialized lazily when needed (after ethers.js loads)
+        this._paymentAmount = null; // Will be calculated when needed
+        this.usdcContractAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'; // USDC on Base network
+        // IMPORTANT: Set your payment recipient address here (your wallet address to receive payments)
+        // Replace '0x0000000000000000000000000000000000000000' with your actual wallet address
+        this.paymentRecipient = '0x0000000000000000000000000000000000000000'; // TODO: Set your payment recipient address
+        this.baseNetworkChainId = 8453; // Base network chain ID (Base mainnet)
+    }
+    
+    // Get payment amount (lazy initialization)
+    getPaymentAmount() {
+        if (this._paymentAmount === null) {
+            if (typeof ethers === 'undefined' || !ethers.utils) {
+                console.error('ethers.js not loaded yet! Cannot calculate payment amount.');
+                return null;
+            }
+            this._paymentAmount = ethers.utils.parseUnits('0.00001', 6); // 0.00001 USDC (6 decimals)
+        }
+        return this._paymentAmount;
     }
 
     async connect() {
@@ -864,6 +887,442 @@ class WalletManager {
             localStorage.setItem('baseRunnerLeaderboard', JSON.stringify(this.leaderboard));
         } catch (error) {
             console.error('Error saving leaderboard:', error);
+        }
+    }
+
+    // Check if user has paid the entry fee
+    async hasPaidEntryFee() {
+        if (!this.isConnected || !this.address) {
+            return false;
+        }
+
+        // Check localStorage first (faster)
+        try {
+            const paymentKey = `baseRunnerPayment_${this.address.toLowerCase()}`;
+            const storedPayment = localStorage.getItem(paymentKey);
+            if (storedPayment) {
+                const paymentData = JSON.parse(storedPayment);
+                // Check if payment is recent (within last 24 hours) or if it's a confirmed transaction
+                if (paymentData.txHash && paymentData.timestamp) {
+                    const hoursSincePayment = (Date.now() - paymentData.timestamp) / (1000 * 60 * 60);
+                    if (hoursSincePayment < 24) {
+                        // Verify on-chain if possible
+                        try {
+                            const isValid = await this.verifyPaymentOnChain(paymentData.txHash);
+                            if (isValid) {
+                                return true;
+                            }
+                        } catch (e) {
+                            console.log('Could not verify payment on-chain, using cached result');
+                            // If verification fails, still trust the cached payment for now
+                            return true;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error checking cached payment:', e);
+        }
+
+        // Check on-chain (slower but more reliable)
+        try {
+            return await this.verifyPaymentOnChain();
+        } catch (e) {
+            console.error('Error verifying payment on-chain:', e);
+            return false;
+        }
+    }
+
+    // Verify payment transaction on-chain
+    async verifyPaymentOnChain(txHash = null) {
+        if (!this.provider || !this.address) {
+            return false;
+        }
+
+        try {
+            // Check USDC balance for payment recipient (if we have access to that address)
+            // Or check transaction history for this address
+            
+            // Simple approach: Check if user has approved or sent USDC
+            // For now, we'll check for recent transactions to the payment recipient
+            
+            if (txHash) {
+                // Verify specific transaction
+                try {
+                    const tx = await this.provider.getTransactionReceipt(txHash);
+                    if (tx && tx.status === 1) {
+                        // Transaction confirmed
+                        return true;
+                    }
+                } catch (e) {
+                    console.error('Error checking transaction:', e);
+                }
+            }
+
+            // Check current USDC balance (if user sent, recipient should have it)
+            // For now, we'll rely on the payment transaction itself
+            return false;
+        } catch (e) {
+            console.error('Error verifying payment on-chain:', e);
+            return false;
+        }
+    }
+
+    // Process payment transaction
+    async payEntryFee() {
+        if (!this.isConnected || !this.signer) {
+            alert('Please connect your wallet first!');
+            return { success: false, error: 'Wallet not connected' };
+        }
+
+        if (!this.provider) {
+            alert('Wallet provider not available. Please reconnect your wallet.');
+            return { success: false, error: 'Provider not available' };
+        }
+        
+        // Check if ethers.js is loaded
+        if (typeof ethers === 'undefined') {
+            alert('ethers.js not loaded! Please refresh the page.');
+            return { success: false, error: 'ethers.js not loaded' };
+        }
+        
+        // Get payment amount (will initialize if needed)
+        const paymentAmount = this.getPaymentAmount();
+        if (!paymentAmount) {
+            alert('Payment system error: Cannot calculate payment amount. Please refresh the page.');
+            return { success: false, error: 'Payment amount calculation failed' };
+        }
+
+        try {
+            // Check if user is on Base network
+            const network = await this.provider.getNetwork();
+            if (network.chainId !== this.baseNetworkChainId) {
+                const switchNetwork = confirm(
+                    'You are not on Base network!\n\n' +
+                    'Current network: ' + network.name + ' (Chain ID: ' + network.chainId + ')\n' +
+                    'Required: Base (Chain ID: ' + this.baseNetworkChainId + ')\n\n' +
+                    'Would you like to switch to Base network?\n\n' +
+                    'OK - Switch to Base network\n' +
+                    'Cancel - Cancel payment'
+                );
+
+                if (switchNetwork) {
+                    try {
+                        // Try to switch network
+                        await this.switchToBaseNetwork();
+                        // Re-check network after switch
+                        const newNetwork = await this.provider.getNetwork();
+                        if (newNetwork.chainId !== this.baseNetworkChainId) {
+                            alert('Failed to switch to Base network. Please switch manually in your wallet.');
+                            return { success: false, error: 'Network switch failed' };
+                        }
+                    } catch (switchError) {
+                        console.error('Network switch error:', switchError);
+                        alert('Failed to switch network. Please switch to Base network manually in your wallet and try again.');
+                        return { success: false, error: 'Network switch failed' };
+                    }
+                } else {
+                    return { success: false, error: 'User cancelled network switch' };
+                }
+            }
+
+            // Check USDC balance
+            const usdcContract = new ethers.Contract(
+                this.usdcContractAddress,
+                [
+                    'function balanceOf(address account) view returns (uint256)',
+                    'function transfer(address to, uint256 amount) returns (bool)',
+                    'function decimals() view returns (uint8)'
+                ],
+                this.signer
+            );
+
+            const balance = await usdcContract.balanceOf(this.address);
+            const paymentAmount = this.getPaymentAmount();
+            if (!paymentAmount) {
+                alert('Payment system error: ethers.js not loaded. Please refresh the page.');
+                return { success: false, error: 'ethers.js not loaded' };
+            }
+            
+            if (balance.lt(paymentAmount)) {
+                alert('Insufficient USDC balance!\n\n' +
+                      'Required: 0.00001 USDC\n' +
+                      'Your balance: ' + ethers.utils.formatUnits(balance, 6) + ' USDC\n\n' +
+                      'Please add USDC to your wallet and try again.');
+                return { success: false, error: 'Insufficient balance' };
+            }
+
+            // Check if payment recipient is set
+            if (!this.paymentRecipient || this.paymentRecipient === '0x0000000000000000000000000000000000000000') {
+                alert('Payment recipient not configured! Please contact game administrator.');
+                return { success: false, error: 'Payment recipient not set' };
+            }
+
+            // Show payment confirmation
+            const confirmPayment = confirm(
+                'Pay Entry Fee\n\n' +
+                'Amount: 0.00001 USDC\n' +
+                'Network: Base\n\n' +
+                'This will initiate a blockchain transaction.\n' +
+                'Gas fees may apply.\n\n' +
+                'OK - Proceed with payment\n' +
+                'Cancel - Cancel'
+            );
+
+            if (!confirmPayment) {
+                return { success: false, error: 'User cancelled payment' };
+            }
+
+            // Update payment UI
+            this.updatePaymentUI('processing');
+
+            // Execute USDC transfer
+            console.log('Initiating USDC transfer...');
+            console.log('Payment details:', {
+                recipient: this.paymentRecipient,
+                amount: paymentAmount.toString(),
+                amountFormatted: ethers.utils.formatUnits(paymentAmount, 6) + ' USDC',
+                from: this.address,
+                contract: this.usdcContractAddress
+            });
+            
+            // Check if signer is properly configured
+            if (!this.signer) {
+                throw new Error('Signer not available. Please reconnect your wallet.');
+            }
+            
+            // Verify signer address matches connected address
+            const signerAddress = await this.signer.getAddress();
+            console.log('Signer address:', signerAddress);
+            console.log('Connected address:', this.address);
+            
+            if (signerAddress.toLowerCase() !== this.address.toLowerCase()) {
+                throw new Error('Signer address mismatch. Please reconnect your wallet.');
+            }
+            
+            // Create and send transaction - this should trigger wallet prompt
+            console.log('Preparing USDC transfer transaction...');
+            console.log('This should trigger your wallet to sign the transaction...');
+            
+            // Declare txResponse and receipt in outer scope
+            let txResponse;
+            let receipt;
+            
+            try {
+                // Method 1: Use populateTransaction and sendTransaction (explicit method - should definitely prompt)
+                console.log('Preparing transaction data...');
+                
+                try {
+                    // First, populate the transaction to see what it will look like
+                    const populatedTx = await usdcContract.populateTransaction.transfer(
+                        this.paymentRecipient, 
+                        paymentAmount
+                    );
+                    console.log('Populated transaction:', populatedTx);
+                    console.log('Transaction data:', {
+                        to: populatedTx.to,
+                        data: populatedTx.data,
+                        gasLimit: populatedTx.gasLimit?.toString(),
+                        value: populatedTx.value?.toString()
+                    });
+                    
+                    // Send using signer's sendTransaction - this should definitely prompt wallet
+                    console.log('Sending transaction via signer (wallet should prompt now)...');
+                    console.log('⚠️ CHECK YOUR WALLET NOW - A TRANSACTION SIGNATURE REQUEST SHOULD APPEAR!');
+                    txResponse = await this.signer.sendTransaction(populatedTx);
+                    
+                    console.log('Transaction sent via signer, response:', txResponse);
+                } catch (populateError) {
+                    console.log('Populate/sendTransaction method failed, trying direct contract call...', populateError);
+                    console.error('Populate error:', populateError);
+                    
+                    // Fallback: Use direct contract call (should also prompt)
+                    console.log('Trying direct contract transfer call...');
+                    console.log('⚠️ CHECK YOUR WALLET NOW - A TRANSACTION SIGNATURE REQUEST SHOULD APPEAR!');
+                    txResponse = await usdcContract.transfer(this.paymentRecipient, paymentAmount);
+                    console.log('Direct contract call successful, response:', txResponse);
+                }
+                
+                // Log transaction details
+                console.log('Transaction object:', {
+                    hash: txResponse.hash,
+                    from: txResponse.from,
+                    to: txResponse.to,
+                    value: txResponse.value?.toString(),
+                    gasLimit: txResponse.gasLimit?.toString(),
+                    gasPrice: txResponse.gasPrice?.toString(),
+                    nonce: txResponse.nonce,
+                    data: txResponse.data
+                });
+                
+                // Check if we got a hash (transaction was sent)
+                if (!txResponse.hash) {
+                    console.error('No transaction hash received! Wallet may not have prompted.');
+                    throw new Error('Transaction failed to generate hash. Wallet may not have prompted for signature. Please check your wallet.');
+                }
+                
+                console.log('Transaction sent successfully, hash:', txResponse.hash);
+                this.updatePaymentUI('confirming', txResponse.hash);
+
+                // Wait for transaction confirmation
+                console.log('Waiting for transaction confirmation (this may take a moment)...');
+                receipt = await txResponse.wait();
+                console.log('Transaction confirmed!', receipt);
+                
+            } catch (txError) {
+                console.error('Transaction error:', txError);
+                console.error('Error code:', txError.code);
+                console.error('Error message:', txError.message);
+                console.error('Error reason:', txError.reason);
+                console.error('Error data:', txError.data);
+                console.error('Full error object:', txError);
+                
+                // If error is 4001, user rejected the transaction
+                if (txError.code === 4001 || 
+                    txError.code === 'ACTION_REJECTED' ||
+                    txError.message?.includes('User rejected') || 
+                    txError.message?.includes('user rejected') ||
+                    txError.message?.includes('rejected') ||
+                    txError.message?.includes('denied')) {
+                    throw new Error('Transaction rejected by user');
+                }
+                
+                // Check if it's a network/connection error
+                if (txError.code === 'NETWORK_ERROR' || txError.message?.includes('network')) {
+                    throw new Error('Network error. Please check your connection and try again.');
+                }
+                
+                // Re-throw to be caught by outer catch
+                throw txError;
+            }
+
+            if (receipt && receipt.status === 1) {
+                // Payment successful
+                // Store payment in localStorage
+                const paymentKey = `baseRunnerPayment_${this.address.toLowerCase()}`;
+                const paymentData = {
+                    txHash: txResponse.hash,
+                    timestamp: Date.now(),
+                    amount: paymentAmount.toString(),
+                    recipient: this.paymentRecipient
+                };
+                localStorage.setItem(paymentKey, JSON.stringify(paymentData));
+
+                this.updatePaymentUI('success', txResponse.hash);
+                return { success: true, txHash: txResponse.hash, receipt: receipt };
+            } else {
+                this.updatePaymentUI('error');
+                alert('Transaction failed! Please try again.');
+                return { success: false, error: 'Transaction failed' };
+            }
+
+        } catch (error) {
+            console.error('Payment error:', error);
+            this.updatePaymentUI('error');
+            
+            let errorMessage = 'Payment failed: ';
+            if (error.code === 4001) {
+                errorMessage = 'Transaction rejected by user.';
+            } else if (error.message) {
+                errorMessage += error.message;
+            } else {
+                errorMessage += 'Unknown error occurred.';
+            }
+            
+            alert(errorMessage);
+            return { success: false, error: errorMessage };
+        }
+    }
+
+    // Switch to Base network
+    async switchToBaseNetwork() {
+        if (!window.ethereum) {
+            throw new Error('No wallet provider found');
+        }
+
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: `0x${this.baseNetworkChainId.toString(16)}` }],
+            });
+        } catch (switchError) {
+            // This error code indicates that the chain has not been added to MetaMask
+            if (switchError.code === 4902) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: `0x${this.baseNetworkChainId.toString(16)}`,
+                            chainName: 'Base',
+                            nativeCurrency: {
+                                name: 'ETH',
+                                symbol: 'ETH',
+                                decimals: 18
+                            },
+                            rpcUrls: ['https://mainnet.base.org'],
+                            blockExplorerUrls: ['https://basescan.org']
+                        }],
+                    });
+                } catch (addError) {
+                    throw new Error('Failed to add Base network to wallet');
+                }
+            } else {
+                throw switchError;
+            }
+        }
+    }
+
+    // Update payment UI status
+    updatePaymentUI(status, txHash = null) {
+        const paymentModal = document.getElementById('payment-modal');
+        const paymentStatus = document.getElementById('payment-status');
+        const paymentButton = document.getElementById('payment-button');
+        const paymentTxHash = document.getElementById('payment-tx-hash');
+
+        if (!paymentModal) return;
+
+        if (status === 'ready') {
+            if (paymentStatus) paymentStatus.textContent = 'Ready to pay';
+            if (paymentButton) {
+                paymentButton.disabled = false;
+                paymentButton.textContent = 'Pay 0.00001 USDC';
+            }
+            if (paymentTxHash) {
+                paymentTxHash.style.display = 'none';
+                paymentTxHash.textContent = '';
+            }
+        } else if (status === 'processing') {
+            if (paymentStatus) paymentStatus.textContent = 'Processing payment...';
+            if (paymentButton) paymentButton.disabled = true;
+            if (paymentButton) paymentButton.textContent = 'Processing...';
+        } else if (status === 'confirming') {
+            if (paymentStatus) paymentStatus.textContent = 'Confirming transaction...';
+            if (paymentButton) paymentButton.disabled = true;
+            if (paymentButton) paymentButton.textContent = 'Confirming...';
+            if (paymentTxHash && txHash) {
+                paymentTxHash.textContent = 'TX: ' + txHash.substring(0, 10) + '...';
+                paymentTxHash.style.display = 'block';
+            }
+        } else if (status === 'success') {
+            if (paymentStatus) paymentStatus.textContent = 'Payment successful! Starting game...';
+            if (paymentButton) {
+                paymentButton.disabled = false;
+                paymentButton.textContent = 'Starting Game...';
+            }
+            if (paymentTxHash && txHash) {
+                paymentTxHash.innerHTML = 'TX: <a href="https://basescan.org/tx/' + txHash + '" target="_blank" style="color: #4CAF50; text-decoration: underline;">' + txHash.substring(0, 10) + '...' + '</a>';
+                paymentTxHash.style.display = 'block';
+            }
+        } else if (status === 'error') {
+            if (paymentStatus) paymentStatus.textContent = 'Payment failed. Please try again.';
+            if (paymentButton) {
+                paymentButton.disabled = false;
+                paymentButton.textContent = 'Try Again';
+            }
+            if (paymentTxHash) {
+                paymentTxHash.style.display = 'none';
+                paymentTxHash.textContent = '';
+            }
         }
     }
 
