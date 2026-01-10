@@ -153,12 +153,13 @@ body::before {
     z-index: 20;
     animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 20px;
-    padding: 8px; /* Reduced padding for mobile */
+    padding: 6px; /* Reduced padding for mobile to fit more content */
     box-sizing: border-box;
     overflow-y: auto; /* Allow vertical scrolling on mobile */
     overflow-x: hidden; /* Prevent horizontal scroll */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
     touch-action: pan-y; /* Allow vertical panning for scrolling */
+    min-height: 100%; /* Ensure screen takes full height */
     max-height: 100%; /* Use 100% of container instead of 100vh */
 }
 
@@ -174,6 +175,8 @@ body::before {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+    min-height: 100% !important; /* Ensure game over screen takes full height */
+    height: 100% !important; /* Force full height */
 }
 
 @keyframes fadeIn {
@@ -234,12 +237,13 @@ body::before {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start; /* Changed from center to flex-start for mobile */
-    gap: 8px; /* Reduced gap for mobile */
+    gap: 6px; /* Reduced gap for mobile to fit more content */
     width: 100%;
     max-width: 520px;
     animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 8px 12px 12px 12px; /* Reduced padding for mobile */
+    padding: 6px 10px 10px 10px; /* Reduced padding for mobile to fit more content */
     box-sizing: border-box;
+    min-height: 90%; /* Ensure it takes most of the screen */
     max-height: 100%; /* Use 100% of parent instead of 100vh */
     overflow-y: auto; /* Allow scrolling if content overflows */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
@@ -926,12 +930,70 @@ button:active {
     }
     
     .screen {
-        padding: 6px 8px 12px 8px; /* Small padding with bottom space for buttons */
+        padding: 4px 6px 10px 6px; /* Minimal padding for more vertical space */
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+        min-height: 100%; /* Ensure screen takes full height */
         max-height: 100%; /* Use 100% of container */
         justify-content: flex-start; /* Align to top */
-        padding-bottom: 12px !important; /* Ensure buttons have space */
+        padding-bottom: 10px !important; /* Ensure buttons have space */
+    }
+    
+    /* Game Over Screen - Force full height and proper spacing */
+    #game-over-screen {
+        min-height: 100% !important; /* Force full height on game over screen */
+        height: 100% !important;
+        padding: 4px 6px 10px 6px !important; /* Consistent minimal padding */
+    }
+    
+    /* Game Over Screen - Maximum vertical space */
+    #game-over-screen .game-over-content {
+        min-height: 95% !important; /* Take most of screen height */
+        padding: 4px 6px 12px 6px !important; /* Minimal padding with bottom space */
+        gap: 4px !important; /* Very small gap */
+        padding-bottom: 12px !important; /* Extra space for buttons */
+    }
+    
+    /* Reduce all game over screen element sizes for better fit */
+    #game-over-screen .score-container {
+        padding: 8px 10px !important;
+        margin-bottom: 3px !important;
+    }
+    
+    #game-over-screen .game-over-title {
+        margin-bottom: 3px !important;
+        font-size: 18px !important;
+    }
+    
+    #game-over-screen .final-score-display {
+        font-size: 20px !important;
+        margin: 3px 0 !important;
+    }
+    
+    #game-over-screen .share-icons-container {
+        gap: 5px !important;
+        padding: 4px 0 3px 0 !important;
+        margin-top: 3px !important;
+    }
+    
+    #game-over-screen .inspirational-message {
+        padding: 6px 8px !important;
+        margin-bottom: 3px !important;
+    }
+    
+    #game-over-screen .inspirational-text {
+        font-size: 13px !important;
+        margin-bottom: 2px !important;
+    }
+    
+    #game-over-screen .inspirational-subtext {
+        font-size: 11px !important;
+    }
+    
+    #game-over-screen .button-group {
+        gap: 5px !important;
+        margin-top: 4px !important;
+        padding-bottom: 10px !important;
     }
     
     .screen h1 {
@@ -994,10 +1056,12 @@ button:active {
         max-height: calc(100vh - 200px); /* Responsive height */
     }
     
+    /* Additional game-over-content override for better fit */
     .game-over-content {
-        padding: 6px 8px 12px 8px; /* Small padding with bottom space */
-        gap: 6px; /* Smaller gap */
-        max-height: 100%; /* Use 100% of parent */
+        padding: 4px 6px 12px 6px !important; /* Minimal padding */
+        gap: 4px !important; /* Very small gap */
+        min-height: 95% !important; /* Take most of parent height */
+        max-height: 100% !important; /* Use 100% of parent */
         padding-bottom: 12px !important; /* Ensure buttons are visible */
     }
     
@@ -1206,9 +1270,16 @@ button:active {
     }
     
     .game-over-content {
-        padding: 4px 6px 8px 6px; /* Minimal padding */
+        padding: 4px 6px 10px 6px; /* Minimal padding with bottom space */
         gap: 4px; /* Very small gap */
+        min-height: 95%; /* Take most of parent height */
         max-height: 100%; /* Use 100% of parent */
+    }
+    
+    #game-over-screen {
+        min-height: 100% !important; /* Ensure full height on small screens */
+        height: 100% !important;
+        padding: 3px !important; /* Even less padding on very small screens */
     }
     
     .score-container {
