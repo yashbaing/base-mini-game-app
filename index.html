@@ -83,8 +83,15 @@
             <div id="wallet-select-modal" class="screen hidden" style="display: none !important; z-index: 30;">
                 <div class="wallet-select-content">
                     <h2>Choose Your Wallet</h2>
-                    <p class="wallet-select-subtitle">Select a wallet to connect</p>
+                    <p class="wallet-select-subtitle" id="wallet-instructions">Select a wallet to connect</p>
+                    <p class="wallet-select-subtitle" id="okx-instructions" style="display: none; color: #FFD700; font-size: 13px; margin-bottom: 8px;">
+                        ⚠️ For OKX Wallet: Open this page in OKX Wallet's built-in browser (DApp browser) for connection to work!
+                    </p>
                     <div class="wallet-options">
+                        <button class="wallet-option-btn" data-wallet="okx" type="button">
+                            <span class="wallet-icon">🟢</span>
+                            <span class="wallet-name">OKX Wallet</span>
+                        </button>
                         <button class="wallet-option-btn" data-wallet="metamask" type="button">
                             <span class="wallet-icon">🦊</span>
                             <span class="wallet-name">MetaMask</span>

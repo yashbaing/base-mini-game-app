@@ -21,6 +21,18 @@ class WalletManager {
             // Check if we're on mobile
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
+            // Log available providers for debugging
+            console.log('Available wallet providers:', {
+                ethereum: typeof window.ethereum !== 'undefined',
+                okxwallet: typeof window.okxwallet !== 'undefined',
+                web3: typeof window.web3 !== 'undefined',
+                isMobile: isMobile
+            });
+            
+            if (typeof window.okxwallet !== 'undefined') {
+                console.log('OKX Wallet detected:', window.okxwallet);
+            }
+            
             if (isMobile) {
                 // Mobile wallet connection
                 return await this.connectMobileWallet();
@@ -36,12 +48,32 @@ class WalletManager {
     }
 
     async connectDesktopWallet() {
-        if (typeof window.ethereum === 'undefined') {
+        // Check for multiple wallet providers (OKX, MetaMask, etc.)
+        let walletProvider = null;
+        let walletName = '';
+        
+        // Check for OKX Wallet first
+        if (typeof window.okxwallet !== 'undefined') {
+            walletProvider = window.okxwallet.ethereum || window.okxwallet;
+            walletName = 'OKX Wallet';
+        }
+        // Check for MetaMask
+        else if (typeof window.ethereum !== 'undefined' && window.ethereum.isMetaMask) {
+            walletProvider = window.ethereum;
+            walletName = 'MetaMask';
+        }
+        // Check for any ethereum provider
+        else if (typeof window.ethereum !== 'undefined') {
+            walletProvider = window.ethereum;
+            walletName = 'Wallet';
+        }
+        
+        if (!walletProvider) {
             const installChoice = confirm(
                 'No Web3 wallet detected!\n\n' +
                 'Would you like to:\n' +
                 'OK - Install MetaMask\n' +
-                'Cancel - Download other wallets'
+                'Cancel - Download other wallets (OKX, Trust, Coinbase, etc.)'
             );
             
             if (installChoice) {
@@ -53,8 +85,9 @@ class WalletManager {
         }
 
         try {
+            console.log('Connecting to:', walletName);
             // Request account access
-            const accounts = await window.ethereum.request({
+            const accounts = await walletProvider.request({
                 method: 'eth_requestAccounts'
             });
 
@@ -64,74 +97,183 @@ class WalletManager {
             }
 
             this.address = accounts[0];
-            this.provider = new ethers.providers.Web3Provider(window.ethereum);
+            this.provider = new ethers.providers.Web3Provider(walletProvider);
             this.signer = this.provider.getSigner();
             this.isConnected = true;
 
             // Listen for account changes
-            window.ethereum.on('accountsChanged', (accounts) => {
-                if (accounts.length === 0) {
-                    this.disconnect();
-                } else {
-                    this.address = accounts[0];
-                    this.updateUI();
-                }
-            });
+            if (walletProvider.on) {
+                walletProvider.on('accountsChanged', (accounts) => {
+                    if (accounts.length === 0) {
+                        this.disconnect();
+                    } else {
+                        this.address = accounts[0];
+                        this.updateUI();
+                    }
+                });
+            }
 
             this.updateUI();
+            alert(walletName + ' connected! Address: ' + this.getShortAddress());
             return true;
         } catch (error) {
             if (error.code === 4001) {
-                alert('Please approve the connection request in your wallet.');
+                alert('Please approve the connection request in your ' + walletName + '.');
             } else {
-                alert('Failed to connect wallet: ' + error.message);
+                alert('Failed to connect ' + walletName + ': ' + error.message);
             }
             return false;
         }
     }
 
     async connectMobileWallet() {
-        // Check for injected ethereum provider (MetaMask Mobile, Trust Wallet, etc.)
-        if (typeof window.ethereum !== 'undefined') {
+        // Check for any injected ethereum provider (OKX Wallet, MetaMask, Trust Wallet, etc.)
+        // Try multiple wallet providers - check ALL possible providers first
+        let walletProvider = null;
+        let walletName = '';
+        
+        console.log('Detecting wallet providers...');
+        console.log('window.okxwallet:', typeof window.okxwallet !== 'undefined' ? 'exists' : 'undefined');
+        console.log('window.ethereum:', typeof window.ethereum !== 'undefined' ? 'exists' : 'undefined');
+        
+        // Check for window.ethereum.providers (multiple wallets installed)
+        if (typeof window.ethereum !== 'undefined' && window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+            console.log('Multiple wallet providers detected:', window.ethereum.providers.length);
+            // Try OKX Wallet first if available
+            for (const provider of window.ethereum.providers) {
+                if (provider.isOKExWallet || provider.isOkxWallet || 
+                    (provider.constructor && provider.constructor.name && provider.constructor.name.toLowerCase().includes('okx'))) {
+                    walletProvider = provider;
+                    walletName = 'OKX Wallet';
+                    console.log('Found OKX Wallet in providers array');
+                    break;
+                }
+            }
+            // If OKX not found, try any other provider
+            if (!walletProvider && window.ethereum.providers.length > 0) {
+                walletProvider = window.ethereum.providers[0];
+                walletName = 'Wallet';
+                console.log('Using first available provider from providers array');
+            }
+        }
+        
+        // Check for OKX Wallet (multiple ways it might be injected)
+        if (!walletProvider && typeof window.okxwallet !== 'undefined') {
+            console.log('Checking window.okxwallet...');
+            if (window.okxwallet.ethereum && typeof window.okxwallet.ethereum.request === 'function') {
+                walletProvider = window.okxwallet.ethereum;
+                walletName = 'OKX Wallet';
+                console.log('Found OKX Wallet via okxwallet.ethereum');
+            } else if (window.okxwallet && typeof window.okxwallet.request === 'function') {
+                walletProvider = window.okxwallet;
+                walletName = 'OKX Wallet';
+                console.log('Found OKX Wallet via direct okxwallet');
+            }
+        }
+        
+        // Check window.ethereum for various wallets (if not already found)
+        if (!walletProvider && typeof window.ethereum !== 'undefined') {
+            console.log('Checking window.ethereum...');
+            walletProvider = window.ethereum;
+            
+            // Detect specific wallet type by checking various properties
+            if (window.ethereum.isOKExWallet || window.ethereum.isOkxWallet || 
+                (window.ethereum._state && window.ethereum._state.isOkx) ||
+                (window.ethereum.constructor && window.ethereum.constructor.name && 
+                 window.ethereum.constructor.name.toLowerCase().includes('okx'))) {
+                walletName = 'OKX Wallet';
+                console.log('Detected OKX Wallet via window.ethereum flags');
+            } else if (window.ethereum.isTrust || (window.ethereum._state && window.ethereum._state.isTrust)) {
+                walletName = 'Trust Wallet';
+                console.log('Detected Trust Wallet');
+            } else if (window.ethereum.isCoinbaseWallet || (window.ethereum._state && window.ethereum._state.isCoinbaseWallet)) {
+                walletName = 'Coinbase Wallet';
+                console.log('Detected Coinbase Wallet');
+            } else if (window.ethereum.isMetaMask || (window.ethereum._state && window.ethereum._state.isMetaMask)) {
+                walletName = 'MetaMask';
+                console.log('Detected MetaMask');
+            } else {
+                // Try window.ethereum anyway - it might be OKX or another wallet
+                walletName = 'Wallet'; // Generic wallet - try to connect anyway
+                console.log('Using generic wallet provider');
+            }
+        }
+        
+        // If we found a provider, try to connect
+        if (walletProvider) {
             try {
-                // Try to connect to injected provider
-                const accounts = await window.ethereum.request({
+                console.log('Attempting to connect to:', walletName, walletProvider);
+                // Try to connect to the provider
+                const accounts = await walletProvider.request({
                     method: 'eth_requestAccounts'
                 });
 
-                if (accounts.length > 0) {
+                if (accounts && accounts.length > 0) {
+                    console.log('Connected! Account:', accounts[0]);
                     this.address = accounts[0];
-                    this.provider = new ethers.providers.Web3Provider(window.ethereum);
+                    this.provider = new ethers.providers.Web3Provider(walletProvider);
                     this.signer = this.provider.getSigner();
                     this.isConnected = true;
 
                     // Listen for account changes
-                    window.ethereum.on('accountsChanged', (accounts) => {
-                        if (accounts.length === 0) {
-                            this.disconnect();
-                        } else {
-                            this.address = accounts[0];
-                            this.updateUI();
-                        }
-                    });
+                    if (walletProvider.on && typeof walletProvider.on === 'function') {
+                        walletProvider.on('accountsChanged', (accounts) => {
+                            if (accounts.length === 0) {
+                                this.disconnect();
+                            } else {
+                                this.address = accounts[0];
+                                this.updateUI();
+                            }
+                        });
+                    }
 
                     this.updateUI();
-                    alert('Wallet connected! Address: ' + this.getShortAddress());
+                    alert(walletName + ' connected! Address: ' + this.getShortAddress());
                     return true;
+                } else {
+                    console.log('No accounts returned from wallet');
+                    alert('No accounts found. Please unlock your wallet and try again.');
                 }
             } catch (error) {
-                console.log('Injected provider error:', error);
+                console.log('Wallet provider connection error:', error);
+                console.log('Error code:', error.code);
+                console.log('Error message:', error.message);
+                console.log('Error stack:', error.stack);
+                
                 if (error.code === 4001) {
-                    alert('Please approve the connection request in your wallet.');
+                    alert('Please approve the connection request in your ' + walletName + '.');
                     return false;
                 } else {
-                    alert('Wallet connection error: ' + (error.message || 'Unknown error'));
-                    return false;
+                    // Show error with more details
+                    const errorMsg = error.message || 'Unknown error';
+                    alert('Wallet connection error: ' + errorMsg + 
+                          '\n\nError code: ' + (error.code || 'N/A') +
+                          '\n\nPlease make sure your wallet is unlocked and try again.');
+                    // Continue to show wallet selection modal as fallback
                 }
             }
         }
 
-        // If no injected provider, show wallet chooser modal
+        // If no provider found or connection failed, show wallet chooser modal
+        console.log('No wallet provider found or connection failed, showing wallet selection modal');
+        console.log('Available providers:', {
+            ethereum: typeof window.ethereum !== 'undefined',
+            okxwallet: typeof window.okxwallet !== 'undefined',
+            web3: typeof window.web3 !== 'undefined',
+            providers: window.ethereum && window.ethereum.providers ? window.ethereum.providers.length : 0
+        });
+        
+        // Show helpful message first
+        if (typeof window.ethereum === 'undefined' && typeof window.okxwallet === 'undefined') {
+            alert('No wallet detected!\n\n' +
+                  'To connect OKX Wallet on mobile:\n\n' +
+                  '1. Open OKX Wallet app\n' +
+                  '2. Use OKX Wallet\'s built-in browser (DApp browser)\n' +
+                  '3. Navigate to this page in OKX Wallet browser\n' +
+                  '4. Then click "Connect Wallet" again\n\n' +
+                  'Opening wallet selection options...');
+        }
+        
         this.showMobileWalletChooser();
         return false;
     }
@@ -143,6 +285,20 @@ class WalletManager {
             // Fallback to simple alert if modal doesn't exist
             this.showMobileWalletChooserFallback();
             return;
+        }
+        
+        // Check if OKX Wallet app is installed (by checking user agent or other indicators)
+        const okxInstructions = document.getElementById('okx-instructions');
+        if (okxInstructions) {
+            // Show OKX instructions if not in OKX Wallet browser
+            const isInOkxBrowser = navigator.userAgent.includes('OKX') || 
+                                   window.location.href.includes('okx') ||
+                                   typeof window.okxwallet !== 'undefined';
+            if (!isInOkxBrowser) {
+                okxInstructions.style.display = 'block';
+            } else {
+                okxInstructions.style.display = 'none';
+            }
         }
         
         // Show modal
@@ -250,7 +406,9 @@ class WalletManager {
     async handleWalletSelection(walletType) {
         this.hideWalletModal();
         
-        if (walletType === 'metamask') {
+        if (walletType === 'okx') {
+            await this.connectOKXWallet();
+        } else if (walletType === 'metamask') {
             await this.connectMetaMaskMobile();
         } else if (walletType === 'trust') {
             await this.connectTrustWallet();
@@ -259,6 +417,177 @@ class WalletManager {
         } else if (walletType === 'browser') {
             await this.connectDesktopWallet();
         }
+    }
+    
+    async connectOKXWallet() {
+        console.log('Attempting to connect OKX Wallet...');
+        console.log('window.okxwallet:', typeof window.okxwallet !== 'undefined' ? window.okxwallet : 'undefined');
+        console.log('window.ethereum:', typeof window.ethereum !== 'undefined' ? window.ethereum : 'undefined');
+        console.log('window.ethereum.providers:', window.ethereum && window.ethereum.providers ? window.ethereum.providers.length : 'undefined');
+        
+        // Check for OKX Wallet provider in ALL possible ways
+        let provider = null;
+        let providerName = '';
+        
+        // Method 1: Check window.ethereum.providers array (multiple wallets)
+        if (typeof window.ethereum !== 'undefined' && window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+            for (const prov of window.ethereum.providers) {
+                if (prov.isOKExWallet || prov.isOkxWallet || 
+                    (prov.constructor && prov.constructor.name && prov.constructor.name.toLowerCase().includes('okx'))) {
+                    provider = prov;
+                    providerName = 'OKX Wallet (from providers array)';
+                    console.log('Found OKX Wallet in providers array');
+                    break;
+                }
+            }
+        }
+        
+        // Method 2: Check window.okxwallet.ethereum
+        if (!provider && typeof window.okxwallet !== 'undefined' && window.okxwallet.ethereum) {
+            provider = window.okxwallet.ethereum;
+            providerName = 'OKX Wallet (via okxwallet.ethereum)';
+            console.log('Found OKX Wallet via okxwallet.ethereum');
+        }
+        // Method 3: Check window.okxwallet directly
+        else if (!provider && typeof window.okxwallet !== 'undefined' && typeof window.okxwallet.request === 'function') {
+            provider = window.okxwallet;
+            providerName = 'OKX Wallet (direct)';
+            console.log('Found OKX Wallet via direct okxwallet');
+        }
+        // Method 4: Check window.ethereum with OKX flags
+        else if (!provider && typeof window.ethereum !== 'undefined') {
+            if (window.ethereum.isOKExWallet || window.ethereum.isOkxWallet) {
+                provider = window.ethereum;
+                providerName = 'OKX Wallet (via ethereum flags)';
+                console.log('Found OKX Wallet via ethereum flags');
+            } else if (window.ethereum.constructor && window.ethereum.constructor.name && 
+                      window.ethereum.constructor.name.toLowerCase().includes('okx')) {
+                provider = window.ethereum;
+                providerName = 'OKX Wallet (via constructor name)';
+                console.log('Found OKX Wallet via constructor name');
+            } else if (window.ethereum._state && window.ethereum._state.isOkx) {
+                provider = window.ethereum;
+                providerName = 'OKX Wallet (via state)';
+                console.log('Found OKX Wallet via state');
+            } else {
+                // Last resort: try window.ethereum anyway (might be OKX without flags)
+                provider = window.ethereum;
+                providerName = 'Wallet (generic - trying anyway)';
+                console.log('Trying generic window.ethereum as fallback');
+            }
+        }
+        
+        // If we found a provider, try to connect
+        if (provider) {
+            try {
+                console.log('Found provider:', providerName, provider);
+                const accounts = await provider.request({
+                    method: 'eth_requestAccounts'
+                });
+                
+                if (accounts && accounts.length > 0) {
+                    console.log('Successfully connected! Account:', accounts[0]);
+                    this.address = accounts[0];
+                    this.provider = new ethers.providers.Web3Provider(provider);
+                    this.signer = this.provider.getSigner();
+                    this.isConnected = true;
+                    
+                    // Listen for account changes
+                    if (provider.on && typeof provider.on === 'function') {
+                        provider.on('accountsChanged', (accounts) => {
+                            if (accounts.length === 0) {
+                                this.disconnect();
+                            } else {
+                                this.address = accounts[0];
+                                this.updateUI();
+                            }
+                        });
+                    }
+                    
+                    this.updateUI();
+                    alert('OKX Wallet connected! Address: ' + this.getShortAddress());
+                    return true;
+                } else {
+                    alert('No accounts found. Please unlock your OKX Wallet and try again.');
+                    return false;
+                }
+            } catch (error) {
+                console.log('OKX Wallet connection error:', error);
+                console.log('Error details:', {
+                    code: error.code,
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                });
+                
+                if (error.code === 4001) {
+                    alert('Please approve the connection request in OKX Wallet.');
+                    return false;
+                } else {
+                    alert('OKX Wallet connection error: ' + (error.message || 'Unknown error') + 
+                          '\n\nPlease make sure OKX Wallet is unlocked and try again.');
+                    return false;
+                }
+            }
+        }
+        
+        // If OKX Wallet not detected, provide instructions
+        // For OKX Wallet on mobile, users MUST open the website from within OKX Wallet app
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+            const currentUrl = window.location.href;
+            const message = 
+                '⚠️ OKX Wallet not detected!\n\n' +
+                'To connect OKX Wallet on mobile, you MUST:\n\n' +
+                '1. Open OKX Wallet app on your phone\n' +
+                '2. Tap on "DApp" or "Browser" in OKX Wallet\n' +
+                '3. Enter or paste this URL:\n' +
+                currentUrl + '\n\n' +
+                '4. Then click "Connect Wallet" again\n\n' +
+                '❌ OKX Wallet does NOT work in regular mobile browsers (Chrome, Safari, etc.)\n' +
+                '✅ You MUST use OKX Wallet\'s built-in DApp browser\n\n' +
+                'Would you like to:\n' +
+                'OK - Open OKX Wallet download page\n' +
+                'Cancel - Copy URL to open in OKX Wallet';
+            
+            const choice = confirm(message);
+            if (choice) {
+                window.open('https://www.okx.com/web3', '_blank');
+            } else {
+                // Try to copy URL to clipboard for user to paste in OKX Wallet
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(currentUrl);
+                        alert('URL copied to clipboard!\n\n' +
+                              'Now:\n' +
+                              '1. Open OKX Wallet app\n' +
+                              '2. Go to DApp browser\n' +
+                              '3. Paste the URL and open it\n' +
+                              '4. Click "Connect Wallet"');
+                    } else {
+                        alert('Please copy this URL manually:\n\n' + currentUrl + '\n\n' +
+                              'Then open it in OKX Wallet\'s DApp browser.');
+                    }
+                } catch (e) {
+                    alert('Please copy this URL manually:\n\n' + currentUrl + '\n\n' +
+                          'Then open it in OKX Wallet\'s DApp browser.');
+                }
+            }
+        } else {
+            // Desktop instructions
+            const message = 
+                'OKX Wallet not detected!\n\n' +
+                'Please install OKX Wallet extension for your browser.\n\n' +
+                'Would you like to open the download page?';
+            
+            const choice = confirm(message);
+            if (choice) {
+                window.open('https://www.okx.com/web3', '_blank');
+            }
+        }
+        
+        return false;
     }
 
     async connectMetaMaskMobile() {
@@ -385,24 +714,27 @@ class WalletManager {
         // Fallback for when modal doesn't exist - show options
         const message = 
             'Choose your wallet:\n\n' +
-            '1 = MetaMask\n' +
-            '2 = Trust Wallet\n' +
-            '3 = Coinbase Wallet\n' +
-            '4 = Browser Wallet\n' +
-            '5 = Download Options\n\n' +
-            'Enter 1-5:';
+            '1 = OKX Wallet\n' +
+            '2 = MetaMask\n' +
+            '3 = Trust Wallet\n' +
+            '4 = Coinbase Wallet\n' +
+            '5 = Browser Wallet\n' +
+            '6 = Download Options\n\n' +
+            'Enter 1-6:';
         
         const choice = prompt(message);
         
         if (choice === '1') {
-            this.connectMetaMaskMobile();
+            this.connectOKXWallet();
         } else if (choice === '2') {
-            this.connectTrustWallet();
+            this.connectMetaMaskMobile();
         } else if (choice === '3') {
-            this.connectCoinbaseWallet();
+            this.connectTrustWallet();
         } else if (choice === '4') {
-            this.connectDesktopWallet();
+            this.connectCoinbaseWallet();
         } else if (choice === '5') {
+            this.connectDesktopWallet();
+        } else if (choice === '6') {
             this.showWalletDownloads();
         }
     }
@@ -412,21 +744,24 @@ class WalletManager {
         const message = 
             'Download a mobile wallet:\n\n' +
             'Choose your wallet:\n' +
-            '1. MetaMask Mobile\n' +
-            '2. Trust Wallet\n' +
-            '3. Coinbase Wallet\n' +
-            '4. See All Wallets\n\n' +
-            'Enter 1-4:';
+            '1. OKX Wallet\n' +
+            '2. MetaMask Mobile\n' +
+            '3. Trust Wallet\n' +
+            '4. Coinbase Wallet\n' +
+            '5. See All Wallets\n\n' +
+            'Enter 1-5:';
         
         const choice = prompt(message);
         
         if (choice === '1') {
-            window.open('https://metamask.io/download/', '_blank');
+            window.open('https://www.okx.com/web3', '_blank');
         } else if (choice === '2') {
-            window.open('https://trustwallet.com/download', '_blank');
+            window.open('https://metamask.io/download/', '_blank');
         } else if (choice === '3') {
-            window.open('https://www.coinbase.com/wallet', '_blank');
+            window.open('https://trustwallet.com/download', '_blank');
         } else if (choice === '4') {
+            window.open('https://www.coinbase.com/wallet', '_blank');
+        } else if (choice === '5') {
             window.open('https://ethereum.org/en/wallets/find-wallet/', '_blank');
         }
     }
