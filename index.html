@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <meta name="description" content="Run, jump, and fly through Base! Endless crypto runner adventure. Dodge bugs, glitches, rug pulls, and broken blocks. Collect Base tokens to unlock rocket mode and boost scores. Connect wallet for leaderboard, share achievements on social media. Fast-paced retro-style game built on Base blockchain. Join the race! 🚀">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0052FF">
     <title>Base Runner - Endless Crypto Game</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -66,6 +67,7 @@
                     </div>
                     <div class="button-group">
                         <button id="restart-button">Play Again</button>
+                        <button id="refresh-button" class="secondary-btn" title="Refresh Page">🔄 Refresh</button>
                         <button id="leaderboard-button-2" class="secondary-btn">Leaderboard</button>
                     </div>
                 </div>
@@ -135,8 +137,43 @@
         }
     </script>
     
-    <!-- Ethers.js for wallet connection - load with error handling -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" onerror="console.warn('Failed to load ethers.js, wallet functionality will be disabled'); window.ethersLoaded = false;" onload="window.ethersLoaded = true;"></script>
+    <!-- Ethers.js for wallet connection - load with error handling and fallback -->
+    <script>
+        (function() {
+            // Try multiple CDN sources for better reliability
+            const cdnSources = [
+                'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js',
+                'https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js'
+            ];
+            
+            let currentIndex = 0;
+            
+            function tryLoad(src) {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = function() {
+                    console.log('Ethers.js loaded successfully from:', src);
+                    window.ethersLoaded = true;
+                };
+                script.onerror = function() {
+                    console.warn('Failed to load ethers.js from:', src);
+                    currentIndex++;
+                    if (currentIndex < cdnSources.length) {
+                        console.log('Trying next CDN source...');
+                        tryLoad(cdnSources[currentIndex]);
+                    } else {
+                        console.warn('All CDN sources failed. Wallet functionality will be disabled.');
+                        window.ethersLoaded = false;
+                    }
+                };
+                document.head.appendChild(script);
+            }
+            
+            // Start loading from first CDN source
+            tryLoad(cdnSources[0]);
+        })();
+    </script>
     <script src="js/utils.js"></script>
     <script src="js/particles.js"></script>
     <script src="js/floatingText.js"></script>
@@ -348,8 +385,32 @@
                 
                 // Set up mobile behavior prevention AFTER game is initialized
                 // Prevent scrolling during gameplay (only for game canvas)
+                // But allow pull-to-refresh when at top of page
+                let touchStartY = 0;
+                document.addEventListener('touchstart', (e) => {
+                    if (e.touches && e.touches.length > 0) {
+                        touchStartY = e.touches[0].clientY;
+                    }
+                }, { passive: true });
+                
                 document.addEventListener('touchmove', (e) => {
                     if (game && game.state === 'playing') {
+                        // Only prevent default on game canvas area
+                        if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
+                            e.preventDefault();
+                        }
+                    } else {
+                        // When not playing, allow pull-to-refresh if at top of page
+                        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                        if (scrollTop === 0 && e.touches && e.touches.length > 0) {
+                            const touchY = e.touches[0].clientY;
+                            // If pulling down from top, allow default (pull-to-refresh)
+                            if (touchY > touchStartY && touchY - touchStartY > 10) {
+                                // Allow pull-to-refresh - don't prevent default
+                                return;
+                            }
+                        }
+                        // Prevent default only on game canvas during non-playing states
                         if (e.target.closest('#game-canvas') || e.target.closest('#game-container')) {
                             e.preventDefault();
                         }
@@ -507,6 +568,16 @@
                             game.hideLeaderboard();
                         }
                     }, 'close-leaderboard');
+                }
+                
+                // Refresh button handler
+                const refreshBtn = document.getElementById('refresh-button');
+                if (refreshBtn) {
+                    addTouchClickListener(refreshBtn, () => {
+                        if (confirm('Refresh the page? Your current game progress will be lost.')) {
+                            window.location.reload();
+                        }
+                    }, 'refresh-button');
                 }
             } catch (initError) {
                 console.error('Initialization error:', initError);

@@ -4,6 +4,12 @@
     box-sizing: border-box;
 }
 
+html {
+    height: 100%;
+    overflow: hidden; /* Prevent body scroll, allow pull-to-refresh */
+    position: relative;
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background: linear-gradient(135deg, #0052FF 0%, #7B3FE4 50%, #FF6B9D 100%);
@@ -15,8 +21,9 @@ body {
     min-height: 100vh;
     min-height: -webkit-fill-available; /* iOS Safari */
     height: 100vh;
-    overflow: hidden;
-    position: fixed; /* Fixed to ensure proper centering */
+    height: -webkit-fill-available; /* iOS Safari full height */
+    overflow: hidden; /* Prevent body scroll */
+    position: fixed; /* Fixed for proper centering */
     top: 0;
     left: 0;
     right: 0;
@@ -24,10 +31,11 @@ body {
     width: 100%;
     margin: 0;
     padding: 0;
-    touch-action: manipulation; /* Changed from none to manipulation for better mobile compatibility */
+    touch-action: manipulation; /* Better mobile touch handling */
     -webkit-touch-callout: none; /* Disable callout on iOS */
     -webkit-user-select: none; /* Prevent text selection */
     user-select: none;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 body::before {
@@ -135,7 +143,7 @@ body::before {
     height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start; /* Changed from center to flex-start for better mobile */
     align-items: center;
     background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(20px) saturate(180%);
@@ -147,8 +155,11 @@ body::before {
     border-radius: 20px;
     padding: 10px;
     box-sizing: border-box;
-    overflow: hidden;
-    touch-action: manipulation; /* Allow touch interaction */
+    overflow-y: auto; /* Allow vertical scrolling on mobile */
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    touch-action: pan-y; /* Allow vertical panning for scrolling */
+    max-height: 100vh; /* Ensure it doesn't exceed viewport */
 }
 
 .screen:not(.hidden) {
@@ -220,15 +231,18 @@ body::before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 16px;
+    justify-content: flex-start; /* Changed from center to flex-start for mobile */
+    gap: 12px; /* Reduced from 16px for mobile */
     width: 100%;
     max-width: 520px;
     animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 10px 20px;
+    padding: 15px 20px 20px 20px; /* Increased padding for mobile */
     box-sizing: border-box;
-    height: 100%;
-    max-height: 100%;
+    min-height: 100%;
+    max-height: 100vh; /* Ensure it doesn't exceed viewport */
+    overflow-y: auto; /* Allow scrolling if content overflows */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 @keyframes fadeInUp {
@@ -292,7 +306,7 @@ body::before {
 
 .score-container {
     text-align: center;
-    padding: 20px 24px;
+    padding: 18px 20px; /* Reduced padding for mobile */
     background: rgba(0, 82, 255, 0.12);
     border-radius: 16px;
     border: 2px solid rgba(0, 82, 255, 0.4);
@@ -300,41 +314,51 @@ body::before {
     box-shadow: 0 8px 32px rgba(0, 82, 255, 0.2),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1);
     width: 100%;
+    max-width: 100%; /* Prevent overflow */
     animation: scoreContainerGlow 3s ease-in-out infinite;
     flex-shrink: 0;
     position: relative;
+    box-sizing: border-box; /* Ensure padding is included in width */
 }
 
 .share-icons-container {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: 12px; /* Increased from 8px for better mobile spacing */
     align-items: center;
     margin-top: 12px;
     padding-top: 12px;
+    padding-bottom: 8px; /* Added bottom padding */
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%; /* Ensure full width */
+    flex-wrap: wrap; /* Allow wrapping on very small screens */
 }
 
 .share-icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 48px; /* Increased from 28px for mobile touch targets */
+    height: 48px; /* Increased from 28px for mobile touch targets */
+    min-width: 48px; /* Ensure minimum touch target */
+    min-height: 48px; /* Ensure minimum touch target */
     padding: 0;
     border: none;
-    border-radius: 6px;
+    border-radius: 10px; /* Increased for better mobile feel */
     background: rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(5px);
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: all;
-    font-size: 14px;
+    pointer-events: all !important; /* Force pointer events */
+    font-size: 20px; /* Increased for better visibility */
     line-height: 1;
     border: 1px solid rgba(255, 255, 255, 0.25);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     color: #fff;
     text-decoration: none;
+    touch-action: manipulation !important; /* Better touch response */
+    -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1) !important;
+    z-index: 1001; /* Ensure it's above other elements */
 }
 
 .share-icon-btn:hover {
@@ -346,6 +370,11 @@ body::before {
 
 .share-icon-btn:active {
     transform: translateY(0) scale(1.05);
+}
+
+.share-icon-btn:focus {
+    outline: 2px solid rgba(0, 82, 255, 0.5);
+    outline-offset: 2px;
 }
 
 @keyframes scoreContainerGlow {
@@ -766,6 +795,16 @@ button:active {
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
+.secondary-btn:active {
+    transform: translateY(-1px) scale(0.98);
+    transition: all 0.1s;
+}
+
+.secondary-btn:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 2px;
+}
+
 /* Leaderboard */
 #leaderboard-content {
     max-width: 550px;
@@ -886,48 +925,72 @@ button:active {
     }
     
     .screen {
-        padding: 20px 15px;
+        padding: 15px 12px 18px 12px; /* Better mobile padding */
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        max-height: 100vh;
     }
     
     .screen h1 {
-        font-size: 36px;
-        margin-bottom: 12px;
+        font-size: 32px; /* Slightly smaller for mobile */
+        margin-bottom: 10px;
     }
     
     .screen h2 {
-        font-size: 28px;
-        margin-bottom: 12px;
+        font-size: 26px; /* Slightly smaller for mobile */
+        margin-bottom: 10px;
     }
     
     .screen p {
         font-size: 14px;
         margin-bottom: 8px;
+        line-height: 1.4; /* Better readability */
     }
     
-        button, .secondary-btn, .wallet-menu-btn {
-        padding: 14px 32px; /* Larger touch target (min 44px height) */
+    button, .secondary-btn, .wallet-menu-btn {
+        padding: 14px 28px; /* Better mobile padding */
         font-size: 15px;
-        max-width: 90%;
-        min-height: 44px; /* Minimum touch target size for mobile */
-        min-width: 44px;
+        max-width: 95%;
+        min-height: 48px; /* Larger touch target for better UX */
+        min-width: 48px;
         touch-action: manipulation; /* Faster touch response */
+        width: 100%; /* Full width on mobile */
+        box-sizing: border-box;
     }
     
     .button-group {
-        max-width: 280px;
-        gap: 10px;
+        max-width: 100%; /* Full width on mobile */
+        gap: 12px; /* Better spacing */
         margin-top: 12px;
+        width: 100%;
+        padding: 0 5px; /* Small padding */
     }
     
     #wallet-menu-section {
-        max-width: 280px;
-        margin: 12px 0 4px 0;
+        max-width: 100%;
+        margin: 12px 0 6px 0;
+        width: 100%;
+        padding: 0 5px;
     }
     
     #leaderboard-content {
         max-width: 100%;
-        padding: 16px;
-        max-height: 300px;
+        padding: 16px 12px; /* Better mobile padding */
+        max-height: calc(100vh - 200px); /* Responsive height */
+    }
+    
+    .game-over-content {
+        padding: 10px 12px 12px 12px;
+        gap: 10px;
+    }
+    
+    .score-container {
+        padding: 14px 16px; /* Reduced padding for mobile */
+    }
+    
+    .share-icons-container {
+        gap: 10px;
+        padding: 10px 0 6px 0;
     }
 }
 
@@ -997,13 +1060,36 @@ button:active {
     .wallet-btn {
         padding: 10px 16px;
         font-size: 12px;
-        min-height: 40px;
+        min-height: 44px; /* Minimum touch target */
+        min-width: 44px;
     }
     
     .share-icon-btn {
-        width: 32px;
-        height: 32px;
-        font-size: 16px;
+        width: 48px; /* Larger touch target on mobile */
+        height: 48px;
+        min-width: 48px;
+        min-height: 48px;
+        font-size: 20px; /* Larger icon */
+        gap: 12px; /* Better spacing */
+    }
+    
+    .game-over-content {
+        padding: 12px 15px 15px 15px;
+        gap: 10px;
+        max-height: calc(100vh - 20px);
+    }
+    
+    .screen {
+        padding: 10px 8px 15px 8px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    button, .secondary-btn, .wallet-menu-btn {
+        min-height: 48px; /* Larger touch target */
+        min-width: 48px;
+        padding: 14px 24px;
+        font-size: 15px;
     }
 }
 
@@ -1031,30 +1117,73 @@ button:active {
     }
     
     .screen {
-        padding: 15px 12px;
+        padding: 12px 10px 20px 10px; /* Better mobile padding */
+        justify-content: flex-start; /* Start from top on mobile */
     }
     
     .screen h1 {
         font-size: 28px;
+        margin-bottom: 10px; /* Reduced margin */
     }
     
     .screen h2 {
         font-size: 22px;
+        margin-bottom: 10px; /* Reduced margin */
+    }
+    
+    .game-over-content {
+        padding: 10px 15px 15px 15px; /* Better mobile padding */
+        gap: 10px; /* Reduced gap for mobile */
+        max-height: calc(100vh - 20px); /* Account for padding */
+    }
+    
+    .score-container {
+        padding: 15px 16px; /* Reduced padding */
+    }
+    
+    .share-icons-container {
+        gap: 10px; /* Better spacing */
+        padding-top: 10px;
+        padding-bottom: 6px;
+    }
+    
+    .share-icon-btn {
+        width: 44px; /* Minimum touch target */
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 18px;
     }
     
     button, .secondary-btn, .wallet-menu-btn {
-        padding: 12px 24px;
-        font-size: 14px;
-        width: 90%;
-        max-width: 260px;
+        padding: 14px 28px; /* Larger padding for mobile */
+        font-size: 15px; /* Slightly larger font */
+        width: 95%; /* Almost full width */
+        max-width: 280px;
+        min-height: 48px; /* Larger touch target */
     }
     
     .button-group {
-        gap: 8px;
+        gap: 10px; /* Better spacing */
+        margin-top: 12px;
+        width: 100%;
     }
     
     #wallet-menu-section {
         max-width: 100%;
+    }
+    
+    .inspirational-message {
+        padding: 12px 16px; /* Reduced padding */
+    }
+    
+    .inspirational-text {
+        font-size: clamp(14px, 4vw, 18px); /* Better mobile sizing */
+        margin-bottom: 4px;
+    }
+    
+    .inspirational-subtext {
+        font-size: clamp(12px, 3vw, 14px); /* Better mobile sizing */
     }
 }
 
